@@ -1,0 +1,159 @@
+/* Dark GitHub-style theme, matching the existing quote dashboards */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface-2: #1c2330;
+  --border: #21262d;
+  --text: #e6edf3;
+  --text-strong: #f0f6fc;
+  --text-muted: #8b949e;
+  --text-faint: #6e7681;
+  --accent: #0ea5e9;
+  --good: #3fb950;
+  --good-bg: #1a7f37;
+  --warn: #e3b341;
+  --warn-bg: #9e6a03;
+  --bad: #f85149;
+  --bad-bg: #6e1c1c;
+  --radius: 14px;
+}
+
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+}
+
+button { font-family: inherit; cursor: pointer; }
+input, select, textarea { font-family: inherit; }
+a { color: var(--accent); text-decoration: none; }
+
+/* ── Layout ── */
+.layout { display: flex; min-height: 100vh; }
+.sidebar {
+  width: 220px; flex-shrink: 0; background: var(--surface);
+  border-right: 1px solid var(--border); padding: 20px 12px;
+  display: flex; flex-direction: column; gap: 4px;
+  position: sticky; top: 0; height: 100vh;
+}
+.sidebar .brand {
+  font-size: 1.05rem; font-weight: 800; color: var(--text-strong);
+  padding: 6px 12px 18px;
+}
+.sidebar .brand span { color: var(--accent); }
+.nav-link {
+  display: block; padding: 9px 12px; border-radius: 8px;
+  color: var(--text-muted); font-weight: 600; font-size: 0.88rem;
+}
+.nav-link:hover { background: var(--surface-2); color: var(--text); }
+.nav-link.active { background: var(--surface-2); color: var(--text-strong); }
+.sidebar .spacer { flex: 1; }
+.sidebar .whoami { padding: 10px 12px; font-size: 0.78rem; color: var(--text-faint); border-top: 1px solid var(--border); }
+.sidebar .whoami b { color: var(--text-muted); display: block; }
+
+.main { flex: 1; padding: 28px 32px 60px; min-width: 0; }
+.page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; gap: 12px; flex-wrap: wrap; }
+.page-head h1 { font-size: 1.35rem; font-weight: 800; color: var(--text-strong); }
+.page-sub { color: var(--text-muted); font-size: 0.84rem; margin-top: 3px; }
+
+/* ── Buttons ── */
+.btn {
+  background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 14px; font-size: 0.84rem; font-weight: 700;
+  transition: background .15s;
+}
+.btn:hover { background: #232c3d; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #06131b; }
+.btn.primary:hover { background: #38bdf8; }
+.btn.danger { color: var(--bad); }
+.btn.small { padding: 4px 10px; font-size: 0.76rem; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Cards / tables ── */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.grid { display: grid; gap: 16px; }
+.grid.cols-4 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.grid.cols-3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.grid.cols-2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+
+.stat-tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
+.stat-tile .label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted); margin-bottom: 8px; }
+.stat-tile .value { font-size: 1.7rem; font-weight: 800; color: var(--text-strong); }
+.stat-tile .sub { font-size: 0.76rem; color: var(--text-faint); margin-top: 4px; }
+
+table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.tbl th { text-align: left; color: var(--text-muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: .05em; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+.tbl td { padding: 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.tbl tr:last-child td { border-bottom: none; }
+.tbl tr.clickable:hover td { background: var(--surface-2); cursor: pointer; }
+.tbl .num { text-align: right; white-space: nowrap; }
+
+/* ── Badges (status: always paired with text label) ── */
+.badge { display: inline-block; font-size: 0.66rem; font-weight: 800; padding: 3px 10px; border-radius: 99px; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+.badge.gray { background: #2d333b; color: var(--text-muted); }
+.badge.blue { background: #0c2d6b; color: #79c0ff; }
+.badge.green { background: var(--good-bg); color: #acf7b7; }
+.badge.yellow { background: var(--warn-bg); color: #fde68a; }
+.badge.red { background: var(--bad-bg); color: #fecaca; }
+
+/* ── Forms ── */
+.field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+.field label { font-size: 0.76rem; font-weight: 700; color: var(--text-muted); }
+.field input, .field select, .field textarea {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); padding: 9px 12px; font-size: 0.88rem;
+}
+.field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+.form-err { background: var(--bad-bg); color: #fecaca; border-radius: 8px; padding: 9px 12px; font-size: 0.8rem; margin-bottom: 14px; }
+
+/* ── Modal ── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: flex-start; justify-content: center; padding: 60px 20px; z-index: 50; overflow-y: auto; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; width: 100%; max-width: 520px; }
+.modal h2 { font-size: 1.05rem; font-weight: 800; color: var(--text-strong); margin-bottom: 18px; }
+.modal .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+
+/* ── Login ── */
+.login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.login-card { width: 100%; max-width: 380px; }
+.login-card h1 { text-align: center; font-size: 1.3rem; font-weight: 800; color: var(--text-strong); margin-bottom: 4px; }
+.login-card .sub { text-align: center; color: var(--text-muted); font-size: 0.82rem; margin-bottom: 22px; }
+
+/* ── Kanban ── */
+.kanban { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items: start; }
+.kanban-col { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; min-height: 120px; }
+.kanban-col h3 { font-size: 0.74rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); padding: 4px 6px 10px; display: flex; justify-content: space-between; }
+.kanban-col.drag-over { border-color: var(--accent); }
+.task-card { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; cursor: grab; }
+.task-card .t-title { font-size: 0.84rem; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.task-card .t-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 0.7rem; color: var(--text-faint); }
+
+/* ── Tabs ── */
+.tab-nav { display: flex; border-bottom: 2px solid var(--border); overflow-x: auto; }
+.tab-btn {
+  background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -2px;
+  padding: 11px 20px; font-size: 0.84rem; font-weight: 700; color: var(--text-faint);
+  white-space: nowrap; border-radius: 10px 10px 0 0;
+}
+.tab-btn:hover { color: var(--text); background: var(--surface-2); }
+.tab-btn.active { color: var(--text-strong); border-bottom-color: var(--accent); background: var(--surface-2); }
+.tab-body { padding-top: 20px; }
+
+/* ── Misc ── */
+.progress-track { background: var(--bg); border-radius: 99px; height: 8px; overflow: hidden; }
+.progress-fill { background: var(--accent); height: 100%; border-radius: 99px; }
+.empty { color: var(--text-faint); font-size: 0.85rem; padding: 24px 0; text-align: center; }
+.muted { color: var(--text-muted); }
+.faint { color: var(--text-faint); }
+
+@media (max-width: 900px) {
+  .layout { flex-direction: column; }
+  .sidebar { width: 100%; height: auto; position: static; flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .sidebar .brand { padding-bottom: 6px; width: 100%; }
+  .sidebar .spacer, .sidebar .whoami { display: none; }
+  .kanban { grid-template-columns: 1fr; }
+  .main { padding: 20px 16px 50px; }
+}
