@@ -125,7 +125,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
   gap: 64px; padding: 48px 56px; flex-wrap: wrap;
   background: url('/hero.jpg') center / cover no-repeat fixed;
 }
-.auth-hero { max-width: 660px; flex: 1; min-width: 320px; }
+.auth-hero { max-width: 660px; flex: 1; min-width: 320px; align-self: flex-start; margin-top: 12vh; }
 .brand-row { display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap; margin-bottom: 40px; }
 .brand-pill {
   background: #fff; border-radius: 20px; padding: 12px 28px;
@@ -134,7 +134,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 }
 .brand-pill b { font-weight: 800; }
 .brand-title {
-  font-size: 1.9rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.02em;
+  font-size: 2.85rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.02em;
   color: #ffffff; text-shadow: 0 2px 18px rgba(0, 0, 0, 0.6);
 }
 .hero-quote {
@@ -144,13 +144,13 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .auth-card {
   width: 100%; max-width: 520px; min-height: 680px; background: #2b1e83; border-radius: 28px;
   padding: 38px 42px 42px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
-  flex-shrink: 0; display: flex; flex-direction: column;
+  flex-shrink: 0; display: flex; flex-direction: column; margin-left: -7vw;
 }
 .auth-card .auth-submit { margin-top: auto; }
 @media (max-width: 900px) {
   .auth-wrap { background-attachment: scroll; padding: 28px 18px; gap: 28px; }
-  .auth-card { min-height: 0; order: 2; }
-  .auth-hero { order: 1; }
+  .auth-card { min-height: 0; order: 2; margin-left: 0; }
+  .auth-hero { order: 1; align-self: auto; margin-top: 0; }
   .brand-pill, .brand-title { font-size: 1.3rem; }
   .hero-quote { font-size: 1.05rem; }
 }
