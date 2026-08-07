@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
-import { useAuth, Badge } from '../App.jsx';
+import { useAuth, ROLE_LABELS } from '../App.jsx';
 
 const ROLE_BADGE = { admin: 'red', manager: 'blue', viewer: 'gray' };
 
@@ -36,7 +36,7 @@ function UserForm({ initial, onSave, onClose }) {
           <div className="field"><label>Role</label>
             <select value={form.role} onChange={set('role')}>
               <option value="viewer">Viewer (read-only)</option>
-              <option value="manager">Manager (can edit)</option>
+              <option value="manager">Operations (can edit)</option>
               <option value="admin">Admin (full control)</option>
             </select>
           </div>
@@ -97,9 +97,9 @@ export default function Team() {
           <tbody>
             {users.map((u) => (
               <tr key={u.id}>
-                <td><b>{u.name}</b><div className="faint" style={{ fontSize: '0.74rem' }}>{u.job_title}</div></td>
+                <td><b>{u.name}</b><div className="faint" style={{ fontSize: '0.74rem' }}>{[u.job_title, u.department].filter(Boolean).join(' · ')}</div></td>
                 <td className="muted">{u.email}</td>
-                <td><span className={`badge ${ROLE_BADGE[u.role]}`}>{u.role}</span></td>
+                <td><span className={`badge ${ROLE_BADGE[u.role]}`}>{ROLE_LABELS[u.role] || u.role}</span></td>
                 <td>{u.active ? <span className="badge green">Active</span> : <span className="badge gray">Deactivated</span>}</td>
                 {isAdmin && <td className="num"><button className="btn small" onClick={() => setModal(u)}>Edit</button></td>}
               </tr>

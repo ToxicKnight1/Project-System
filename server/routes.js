@@ -32,9 +32,31 @@ router.post('/auth/login', (req, res) => {
   });
 });
 
+// Self-service signup from the login card. The role pills map:
+// "admin" -> admin, "operations" -> manager (edit rights, no team management).
+router.post('/auth/register', (req, res) => {
+  const { name, email, password, role = 'operations', job_title = '', department = '' } = req.body || {};
+  if (!name || !email || !password) return res.status(400).json({ error: 'Name, email and password required' });
+  if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+  const dbRole = role === 'admin' ? 'admin' : 'manager';
+  try {
+    const info = db
+      .prepare('INSERT INTO users (name, email, password_hash, role, job_title, department) VALUES (?, ?, ?, ?, ?, ?)')
+      .run(name, email, bcrypt.hashSync(password, 10), dbRole, job_title, department);
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
+    res.status(201).json({
+      token: signToken(user),
+      user: { id: user.id, name: user.name, email: user.email, role: user.role, job_title: user.job_title, department: user.department },
+    });
+  } catch (e) {
+    if (String(e).includes('UNIQUE')) return res.status(409).json({ error: 'An account with this email already exists' });
+    throw e;
+  }
+});
+
 router.get('/auth/me', requireAuth, (req, res) => {
   const user = db
-    .prepare('SELECT id, name, email, role, job_title FROM users WHERE id = ? AND active = 1')
+    .prepare('SELECT id, name, email, role, job_title, department FROM users WHERE id = ? AND active = 1')
     .get(req.user.id);
   if (!user) return res.status(401).json({ error: 'Account disabled' });
   res.json(user);
@@ -91,7 +113,7 @@ router.get('/dashboard', (req, res) => {
 // ── Users (admin manages; everyone can list for assignee pickers) ─
 router.get('/users', (req, res) => {
   res.json(
-    db.prepare('SELECT id, name, email, role, job_title, active, created_at FROM users ORDER BY name').all()
+    db.prepare('SELECT id, name, email, role, job_title, department, active, created_at FROM users ORDER BY name').all()
   );
 });
 

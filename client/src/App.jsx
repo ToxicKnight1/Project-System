@@ -50,7 +50,7 @@ export default function App() {
             <div className="spacer" />
             <div className="whoami">
               <b>{user.name}</b>
-              {user.role}
+              {ROLE_LABELS[user.role] || user.role}
             </div>
             <button className="btn small" onClick={logout} style={{ margin: '10px 12px 0' }}>Sign out</button>
           </nav>
@@ -70,6 +70,8 @@ export default function App() {
 }
 
 // Shared helpers used across pages
+export const ROLE_LABELS = { admin: 'Admin', manager: 'Operations', viewer: 'Viewer' };
+
 export const STATUS_LABELS = {
   planning: ['Planning', 'blue'],
   active: ['Active', 'green'],

@@ -75,6 +75,12 @@ CREATE TABLE IF NOT EXISTS documents (
 );
 `);
 
+// Lightweight migration for databases created before the department field existed.
+const userCols = db.prepare('PRAGMA table_info(users)').all();
+if (!userCols.some((c) => c.name === 'department')) {
+  db.exec("ALTER TABLE users ADD COLUMN department TEXT DEFAULT ''");
+}
+
 // Seed a first admin so the portal is usable immediately after deploy.
 const userCount = db.prepare('SELECT COUNT(*) AS n FROM users').get().n;
 if (userCount === 0) {
