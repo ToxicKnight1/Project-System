@@ -136,7 +136,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
   flex: 1; min-width: 0; align-self: flex-start; margin-top: -36px;
   display: flex; flex-direction: column; align-items: flex-end; padding-right: 1vw;
 }
-.brand-row { display: flex; align-items: center; justify-content: flex-end; gap: 22px; flex-wrap: nowrap; margin-bottom: 0; margin-right: 15vw; }
+.brand-row { display: flex; align-items: center; justify-content: flex-end; gap: 22px; flex-wrap: nowrap; margin-bottom: 0; margin-right: 10vw; }
 .brand-pill {
   background: #fff; border-radius: 30px; padding: 20px 48px;
   font-size: clamp(2.2rem, 3.2vw, 3.8rem); color: #3f2b96; font-weight: 400; letter-spacing: -0.02em;
@@ -153,7 +153,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 }
 .hero-quote {
   /* top margin aims the quote's first line at the login card's top edge (card is 680px tall, centered) */
-  max-width: 720px; margin-right: 20vw; margin-top: max(24px, calc(50vh - 453px));
+  max-width: 720px; margin-right: 18vw; margin-top: max(24px, calc(50vh - 453px));
   font-size: 1.35rem; font-weight: 700; font-style: italic; line-height: 1.85;
   text-align: center; color: #ffffff; text-shadow: 0 2px 16px rgba(0, 0, 0, 0.65);
 }
