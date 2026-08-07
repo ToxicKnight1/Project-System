@@ -47,13 +47,14 @@ export default function App() {
             <NavLink to="/" end className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Dashboard</NavLink>
             <NavLink to="/projects" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Projects</NavLink>
             <NavLink to="/team" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Team</NavLink>
-            <div className="spacer" />
+          </nav>
+          <div className="user-corner">
             <div className="whoami">
               <b>{user.name}</b>
               {ROLE_LABELS[user.role] || user.role}
             </div>
-            <button className="btn small" onClick={logout} style={{ margin: '10px 12px 0' }}>Sign out</button>
-          </nav>
+            <button className="btn small" onClick={logout}>Sign out</button>
+          </div>
           <main className="main">
             <Routes>
               <Route path="/" element={<Dashboard />} />

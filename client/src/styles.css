@@ -51,8 +51,15 @@ a { color: var(--accent); text-decoration: none; }
 .nav-link:hover { background: var(--surface-2); color: var(--text); }
 .nav-link.active { background: var(--surface-2); color: var(--text-strong); }
 .sidebar .spacer { flex: 1; }
-.sidebar .whoami { padding: 10px 12px; font-size: 0.78rem; color: var(--text-faint); border-top: 1px solid var(--border); }
-.sidebar .whoami b { color: var(--text-muted); display: block; }
+
+.user-corner {
+  position: fixed; right: 20px; bottom: 16px; z-index: 40;
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 99px;
+  padding: 8px 10px 8px 18px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.user-corner .whoami { font-size: 0.76rem; color: var(--text-faint); line-height: 1.3; }
+.user-corner .whoami b { color: var(--text); display: block; font-size: 0.82rem; }
 
 .main { flex: 1; padding: 28px 32px 60px; min-width: 0; }
 .page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; gap: 12px; flex-wrap: wrap; }
@@ -129,7 +136,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
   flex: 1; min-width: 0; align-self: flex-start; margin-top: -36px;
   display: flex; flex-direction: column; align-items: flex-end; padding-right: 1vw;
 }
-.brand-row { display: flex; align-items: center; justify-content: flex-end; gap: 22px; flex-wrap: nowrap; margin-bottom: 0; }
+.brand-row { display: flex; align-items: center; justify-content: flex-end; gap: 22px; flex-wrap: nowrap; margin-bottom: 0; margin-right: 15vw; }
 .brand-pill {
   background: #fff; border-radius: 30px; padding: 20px 48px;
   font-size: clamp(2.2rem, 3.2vw, 3.8rem); color: #3f2b96; font-weight: 400; letter-spacing: -0.02em;
@@ -160,7 +167,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
   .auth-wrap { background-attachment: scroll; padding: 28px 18px; gap: 28px; flex-wrap: wrap; }
   .auth-card { min-height: 0; order: 2; margin-left: 0; }
   .auth-hero { order: 1; align-self: auto; margin-top: 0; align-items: center; padding-right: 0; }
-  .brand-row { flex-wrap: wrap; justify-content: center; margin-bottom: 20px; }
+  .brand-row { flex-wrap: wrap; justify-content: center; margin-bottom: 20px; margin-right: 0; }
   .brand-pill { font-size: 1.6rem; padding: 10px 24px; }
   .brand-title { font-size: 1.3rem; white-space: normal; text-align: center; }
   .hero-quote { font-size: 1.05rem; margin-right: 0; }
