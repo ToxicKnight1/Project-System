@@ -121,15 +121,33 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 
 /* ── Auth card (matches the company sign-in card style) ── */
 .auth-wrap {
-  min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  gap: 56px; padding: 40px; flex-wrap: wrap;
   background:
-    radial-gradient(900px 500px at 85% 15%, rgba(120, 150, 220, 0.25), transparent 60%),
-    radial-gradient(700px 500px at 10% 90%, rgba(60, 80, 180, 0.3), transparent 60%),
-    linear-gradient(135deg, #10142e 0%, #232a52 55%, #3c4a72 100%);
+    linear-gradient(110deg, rgba(6, 10, 34, 0.88) 0%, rgba(10, 18, 50, 0.62) 45%, rgba(8, 14, 40, 0.45) 100%),
+    url('/hero.jpg') center / cover no-repeat fixed;
+}
+.auth-hero { max-width: 560px; color: #eaf0ff; }
+.auth-hero .hero-kicker {
+  font-size: 0.76rem; font-weight: 800; letter-spacing: 0.22em; text-transform: uppercase;
+  color: #8fb3ff; margin-bottom: 18px;
+}
+.auth-hero h1 {
+  font-size: 2.3rem; font-weight: 800; line-height: 1.15; color: #ffffff;
+  margin-bottom: 20px; text-shadow: 0 2px 24px rgba(0, 0, 0, 0.5);
+}
+.auth-hero p {
+  font-size: 0.98rem; line-height: 1.75; color: rgba(230, 238, 255, 0.88);
+  margin-bottom: 14px; text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45);
 }
 .auth-card {
-  width: 100%; max-width: 460px; background: #2b1e83; border-radius: 26px;
+  width: 100%; max-width: 440px; background: rgba(43, 30, 131, 0.92); border-radius: 26px;
   padding: 30px 34px 34px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px); flex-shrink: 0;
+}
+@media (max-width: 900px) {
+  .auth-wrap { background-attachment: scroll; padding: 28px 18px; gap: 28px; }
+  .auth-hero h1 { font-size: 1.6rem; }
 }
 .auth-tabs {
   display: flex; background: rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 5px; margin-bottom: 22px;

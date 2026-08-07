@@ -39,6 +39,21 @@ export default function Login() {
 
   return (
     <div className="auth-wrap">
+      <div className="auth-hero">
+        <div className="hero-kicker">Central Pharma · Project Portal</div>
+        <h1>Operational excellence, delivered project by project.</h1>
+        <p>
+          At Central Pharma we pride ourselves on operational excellence — above all in how we
+          coordinate and manage our projects. Our approach is hands-on, transparent and resilient:
+          every project is planned with clarity, tracked with discipline, and delivered by a team
+          working from one shared source of truth.
+        </p>
+        <p>
+          From the first quote to the final handover, we hold ourselves accountable — to each
+          other, to our partners, and to the standards our industry demands. This portal is where
+          that commitment lives: one place for our projects, our people, and our progress.
+        </p>
+      </div>
       <form className="auth-card" onSubmit={submit}>
         <div className="auth-tabs">
           <button type="button" className={`auth-tab${mode === 'signin' ? ' active' : ''}`} onClick={() => switchMode('signin')}>
