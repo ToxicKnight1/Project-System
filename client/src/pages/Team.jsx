@@ -69,7 +69,7 @@ export default function Team() {
   const isAdmin = user.role === 'admin';
 
   const load = () => api('/users').then(setUsers).catch((e) => setErr(e.message));
-  useEffect(load, []);
+  useEffect(() => { load(); }, []);
 
   const save = async (body) => {
     if (modal === 'new') await api('/users', { method: 'POST', body });

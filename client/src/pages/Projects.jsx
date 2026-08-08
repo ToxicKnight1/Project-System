@@ -80,7 +80,7 @@ export default function Projects() {
     api('/projects').then(setProjects).catch((e) => setErr(e.message));
     api('/users').then((all) => setUsers(all.filter((u) => u.active))).catch(() => {});
   };
-  useEffect(load, []);
+  useEffect(() => { load(); }, []);
 
   const create = async (body) => {
     const p = await api('/projects', { method: 'POST', body });
