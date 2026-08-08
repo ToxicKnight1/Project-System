@@ -133,7 +133,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
   flex: 1; min-width: 0; align-self: flex-start; margin-top: calc(-36px + 2vh);
   display: flex; flex-direction: column; align-items: flex-end; padding-right: 1vw;
 }
-.brand-row { display: flex; align-items: center; justify-content: flex-end; gap: 22px; flex-wrap: nowrap; margin-bottom: 0; margin-right: 10vw; }
+.brand-row { display: flex; align-items: center; justify-content: flex-end; gap: 22px; flex-wrap: nowrap; margin-bottom: 0; margin-right: 8vw; }
 .brand-pill {
   background: #fff; border-radius: 30px; padding: 20px 48px;
   font-size: clamp(2.2rem, 3.2vw, 3.8rem); color: #3f2b96; font-weight: 400; letter-spacing: -0.02em;
@@ -150,7 +150,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 }
 .hero-quote {
   /* top margin aims the quote's first line at the login card's top edge (card is 680px tall, centered) */
-  max-width: 720px; margin-right: 16vw; margin-top: max(calc(24px + 2vh), calc(52vh - 453px));
+  max-width: 720px; margin-right: 8vw; margin-top: max(calc(24px + 2vh), calc(52vh - 453px));
   font-size: 1.35rem; font-weight: 700; font-style: italic; line-height: 1.85;
   text-align: center; color: #ffffff; text-shadow: 0 2px 16px rgba(0, 0, 0, 0.65);
 }
@@ -242,6 +242,17 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
   min-height: min(860px, 88vh); display: flex; flex-direction: column;
 }
 .modal.wizard .actions { margin-top: auto; padding-top: 24px; }
+
+/* Larger type inside the wizard */
+.modal.wizard h2 { font-size: 1.7rem; margin-bottom: 8px; }
+.modal.wizard .wizard-progress span { font-size: 1.15rem; }
+.modal.wizard .field label { font-size: 1.15rem; margin-bottom: 8px; }
+.modal.wizard .field input,
+.modal.wizard .field select,
+.modal.wizard .field textarea { font-size: 1.35rem; padding: 13px 16px; }
+.modal.wizard .choice { font-size: 1.25rem; padding: 16px 18px; }
+.modal.wizard .form-err { font-size: 1.15rem; }
+.modal.wizard .btn { font-size: 1.25rem; padding: 12px 24px; }
 .wizard-head { margin-bottom: 18px; }
 .wizard-progress { margin-top: 10px; }
 .wizard-progress span { font-size: 0.78rem; color: var(--text-muted); display: block; margin-bottom: 7px; }
