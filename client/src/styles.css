@@ -237,7 +237,11 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .tab-body { padding-top: 20px; }
 
 /* ── Intake wizard ── */
-.modal.wizard { max-width: 960px; padding: 32px 36px; margin: auto; }
+.modal.wizard {
+  max-width: 960px; padding: 48px 36px; margin: auto;
+  min-height: min(860px, 88vh); display: flex; flex-direction: column;
+}
+.modal.wizard .actions { margin-top: auto; padding-top: 24px; }
 .wizard-head { margin-bottom: 18px; }
 .wizard-progress { margin-top: 10px; }
 .wizard-progress span { font-size: 0.78rem; color: var(--text-muted); display: block; margin-bottom: 7px; }
