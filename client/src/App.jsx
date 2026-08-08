@@ -29,7 +29,7 @@ export default function App() {
   const logout = () => {
     clearToken();
     setUser(null);
-    navigate('/login');
+    navigate('/');
   };
 
   if (loading) return <div className="login-wrap muted">Loading…</div>;
@@ -38,6 +38,7 @@ export default function App() {
     <AuthCtx.Provider value={{ user, setUser, logout }}>
       {!user ? (
         <Routes>
+          <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="*" element={<Login />} />
         </Routes>
       ) : (
