@@ -13,7 +13,7 @@ const KANBAN_COLS = [
 
 function TaskForm({ initial, users, onSave, onClose }) {
   const [form, setForm] = useState({
-    title: '', description: '', status: 'todo', priority: 'medium', assignee_id: '', due_date: '',
+    title: '', description: '', status: 'todo', priority: 'medium',
     ...initial,
     assignee_id: initial?.assignee_id ?? '',
     due_date: initial?.due_date ?? '',
@@ -68,7 +68,7 @@ function TaskForm({ initial, users, onSave, onClose }) {
 
 function QuoteForm({ initial, onSave, onClose }) {
   const [form, setForm] = useState({
-    vendor: '', reference: '', amount: '', status: 'pending', quote_date: '', notes: '',
+    vendor: '', reference: '', status: 'pending', notes: '',
     ...initial,
     amount: initial?.amount ?? '',
     quote_date: initial?.quote_date ?? '',

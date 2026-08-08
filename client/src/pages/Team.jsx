@@ -6,7 +6,7 @@ const ROLE_BADGE = { admin: 'red', manager: 'blue', viewer: 'gray' };
 
 function UserForm({ initial, onSave, onClose }) {
   const [form, setForm] = useState({
-    name: '', email: '', role: 'viewer', job_title: '', password: '', active: 1,
+    name: '', email: '', role: 'viewer', job_title: '', active: 1,
     ...initial,
     password: '',
   });
