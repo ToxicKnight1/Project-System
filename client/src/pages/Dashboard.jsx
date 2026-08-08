@@ -26,6 +26,7 @@ export default function Dashboard() {
 
   return (
     <>
+      <div className="dash-bg" />
       <div className="page-head">
         <div>
           <h1>Dashboard</h1>

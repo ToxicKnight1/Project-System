@@ -63,6 +63,14 @@ a { color: var(--accent); text-decoration: none; }
 .page-head h1 { font-size: 1.35rem; font-weight: 800; color: var(--text-strong); }
 .page-sub { color: var(--text-muted); font-size: 0.84rem; margin-top: 3px; }
 
+/* ── Dashboard backdrop ── */
+.dash-bg {
+  position: fixed; inset: 0; z-index: -1;
+  background:
+    linear-gradient(rgba(13, 17, 23, 0.82), rgba(13, 17, 23, 0.92)),
+    url('/dashboard-bg.jpg') center / cover no-repeat;
+}
+
 /* ── Buttons ── */
 .btn {
   background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
