@@ -75,10 +75,19 @@ CREATE TABLE IF NOT EXISTS documents (
 );
 `);
 
-// Lightweight migration for databases created before the department field existed.
+// Lightweight migrations for databases created before newer fields existed.
 const userCols = db.prepare('PRAGMA table_info(users)').all();
 if (!userCols.some((c) => c.name === 'department')) {
   db.exec("ALTER TABLE users ADD COLUMN department TEXT DEFAULT ''");
+}
+const projectCols = db.prepare('PRAGMA table_info(projects)').all();
+for (const [col, ddl] of [
+  ['department', "ALTER TABLE projects ADD COLUMN department TEXT DEFAULT ''"],
+  ['expense_type', "ALTER TABLE projects ADD COLUMN expense_type TEXT DEFAULT ''"],
+  ['priority', "ALTER TABLE projects ADD COLUMN priority TEXT DEFAULT ''"],
+  ['intake', "ALTER TABLE projects ADD COLUMN intake TEXT DEFAULT ''"],
+]) {
+  if (!projectCols.some((c) => c.name === col)) db.exec(ddl);
 }
 
 // Seed a first admin so the portal is usable immediately after deploy.

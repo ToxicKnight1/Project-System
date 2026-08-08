@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth, Badge, fmtDate, fmtMoney } from '../App.jsx';
+import IntakeWizard from './IntakeWizard.jsx';
 
 const EMPTY = { name: '', client: '', description: '', status: 'planning', start_date: '', due_date: '', budget: '', manager_id: '' };
 
@@ -125,7 +126,7 @@ export default function Projects() {
         )}
       </div>
 
-      {showForm && <ProjectForm users={users} onSave={create} onClose={() => setShowForm(false)} />}
+      {showForm && <IntakeWizard onSave={create} onClose={() => setShowForm(false)} />}
     </>
   );
 }

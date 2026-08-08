@@ -2,12 +2,14 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const routes = require('./routes');
+const aiRoutes = require('./ai');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(express.json());
 app.use('/api', routes);
+app.use('/api', aiRoutes);
 
 // Serve the built React app (client/dist) in production.
 const distDir = path.join(__dirname, '..', 'client', 'dist');

@@ -179,11 +179,14 @@ router.get('/projects/:id', (req, res) => {
 });
 
 router.post('/projects', requireRole('manager'), (req, res) => {
-  const { name, client = '', description = '', status = 'planning', start_date = null, due_date = null, budget = null, manager_id = null } = req.body || {};
+  const {
+    name, client = '', description = '', status = 'planning', start_date = null, due_date = null,
+    budget = null, manager_id = null, department = '', expense_type = '', priority = '', intake = null,
+  } = req.body || {};
   if (!name) return res.status(400).json({ error: 'Project name required' });
   const info = db
-    .prepare('INSERT INTO projects (name, client, description, status, start_date, due_date, budget, manager_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-    .run(name, client, description, status, start_date, due_date, budget, manager_id);
+    .prepare('INSERT INTO projects (name, client, description, status, start_date, due_date, budget, manager_id, department, expense_type, priority, intake) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(name, client, description, status, start_date, due_date, budget, manager_id, department, expense_type, priority, intake ? JSON.stringify(intake) : '');
   res.status(201).json(db.prepare('SELECT * FROM projects WHERE id = ?').get(info.lastInsertRowid));
 });
 

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth, Badge, fmtDate, fmtMoney } from '../App.jsx';
 import { ProjectForm } from './Projects.jsx';
+import CompareChat from './CompareChat.jsx';
 
 const KANBAN_COLS = [
   ['todo', 'To do'],
@@ -198,7 +199,7 @@ export default function ProjectDetail() {
           <div className="faint" style={{ fontSize: '0.76rem', marginBottom: 4 }}>
             <a onClick={() => navigate('/projects')} style={{ cursor: 'pointer' }}>Projects</a> / {project.name}
           </div>
-          <h1>{project.name} <Badge value={project.status} /></h1>
+          <h1>{project.name} <Badge value={project.status} /> {project.priority && <Badge value={project.priority} />}</h1>
           <div className="page-sub">
             {project.client && <>{project.client} · </>}
             {project.manager_name ? `PM: ${project.manager_name}` : 'No manager assigned'} · {fmtDate(project.start_date)} → {fmtDate(project.due_date)}
@@ -222,9 +223,15 @@ export default function ProjectDetail() {
       {project.description && <div className="card" style={{ marginBottom: 22, fontSize: '0.87rem', color: 'var(--text-muted)' }}>{project.description}</div>}
 
       <div className="tab-nav">
-        {['tasks', 'quotes', 'documents'].map((t) => (
+        {[
+          ['tasks', `Tasks (${project.tasks.length})`],
+          ['quotes', `Quotes (${project.quotes.length})`],
+          ['documents', `Documents (${project.documents.length})`],
+          ...(canEdit ? [['compare', '✦ Compare Quotes (AI)']] : []),
+          ['details', 'Details'],
+        ].map(([t, label]) => (
           <button key={t} className={`tab-btn${tab === t ? ' active' : ''}`} onClick={() => setTab(t)}>
-            {t === 'tasks' ? `Tasks (${project.tasks.length})` : t === 'quotes' ? `Quotes (${project.quotes.length})` : `Documents (${project.documents.length})`}
+            {label}
           </button>
         ))}
       </div>
@@ -320,6 +327,35 @@ export default function ProjectDetail() {
                 </tbody>
               </table>
             )}
+          </div>
+        )}
+        {tab === 'compare' && <CompareChat projectId={project.id} docCount={project.documents.length} />}
+
+        {tab === 'details' && (
+          <div className="card">
+            <h2 style={{ fontSize: '0.95rem', marginBottom: 14 }}>Project intake details</h2>
+            {(() => {
+              let intake = null;
+              try { intake = project.intake ? JSON.parse(project.intake) : null; } catch { /* older project */ }
+              const rows = [
+                ['Department', project.department],
+                ['Expense type', project.expense_type],
+                ...(intake ? Object.entries(intake).map(([k, v]) => [k, Array.isArray(v) ? v.join(', ') : v]) : []),
+              ].filter(([, v]) => v && String(v).trim());
+              if (!rows.length) return <div className="empty">No intake details recorded for this project.</div>;
+              return (
+                <table className="tbl">
+                  <tbody>
+                    {rows.map(([k, v]) => (
+                      <tr key={k}>
+                        <td className="muted" style={{ width: 280, verticalAlign: 'top' }}>{k}</td>
+                        <td style={{ whiteSpace: 'pre-wrap' }}>{v}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              );
+            })()}
           </div>
         )}
       </div>

@@ -42,11 +42,13 @@ export default function App() {
         </Routes>
       ) : (
         <div className="layout">
-          <nav className="sidebar">
+          <nav className="topbar">
             <div className="brand">Project <span>Portal</span></div>
-            <NavLink to="/" end className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Dashboard</NavLink>
-            <NavLink to="/projects" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Projects</NavLink>
-            <NavLink to="/team" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Team</NavLink>
+            <div className="topbar-links">
+              <NavLink to="/" end className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Dashboard</NavLink>
+              <NavLink to="/projects" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Projects</NavLink>
+              <NavLink to="/team" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Team</NavLink>
+            </div>
           </nav>
           <div className="user-corner">
             <div className="whoami">
@@ -88,6 +90,11 @@ export const STATUS_LABELS = {
   low: ['Low', 'gray'],
   medium: ['Medium', 'blue'],
   high: ['High', 'red'],
+  critical: ['Critical', 'red'],
+  urgent_important: ['Urgent & Important', 'red'],
+  urgent_low: ['Urgent, Lower Impact', 'yellow'],
+  important_not_urgent: ['Important, Not Urgent', 'blue'],
+  desirable: ['Desirable', 'gray'],
 };
 
 export function Badge({ value }) {
@@ -96,6 +103,6 @@ export function Badge({ value }) {
 }
 
 export const fmtMoney = (n) =>
-  n == null ? '—' : Number(n).toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+  n == null ? '—' : Number(n).toLocaleString('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 });
 
 export const fmtDate = (d) => (d ? new Date(d + (d.length === 10 ? 'T00:00:00' : '')).toLocaleDateString() : '—');
