@@ -94,7 +94,7 @@ export default function Login() {
               type={showPw ? 'text' : 'password'}
               value={form.password}
               onChange={set('password')}
-              placeholder={mode === 'create' ? 'Choose a password (min 8 characters)' : ''}
+              placeholder={mode === 'create' ? 'Choose a password (min 8 characters)' : 'Enter your password'}
               minLength={mode === 'create' ? 8 : undefined}
               required
             />
