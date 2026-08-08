@@ -237,7 +237,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .tab-body { padding-top: 20px; }
 
 /* ── Intake wizard ── */
-.modal.wizard { max-width: 640px; }
+.modal.wizard { max-width: 960px; padding: 32px 36px; margin: auto; }
 .wizard-head { margin-bottom: 18px; }
 .wizard-progress { margin-top: 10px; }
 .wizard-progress span { font-size: 0.78rem; color: var(--text-muted); display: block; margin-bottom: 7px; }
