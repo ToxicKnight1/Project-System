@@ -150,9 +150,12 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 }
 .hero-quote {
   /* top margin aims the quote's first line at the login card's top edge (card is 680px tall, centered) */
-  max-width: 720px; margin-right: 8vw; margin-top: max(calc(24px + 2vh), calc(52vh - 453px));
+  max-width: 760px; margin-right: 8vw; margin-top: max(calc(24px + 2vh), calc(52vh - 453px));
   font-size: 1.35rem; font-weight: 700; font-style: italic; line-height: 1.85;
-  text-align: center; color: #ffffff; text-shadow: 0 2px 16px rgba(0, 0, 0, 0.65);
+  text-align: center; color: #ffffff;
+  background: rgba(13, 22, 58, 0.88); border: 1px solid rgba(120, 140, 220, 0.35);
+  border-radius: 24px; padding: 30px 38px;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.4); backdrop-filter: blur(6px);
 }
 .auth-card {
   width: 100%; max-width: 520px; min-height: 680px; background: #2b1e83; border-radius: 28px;
