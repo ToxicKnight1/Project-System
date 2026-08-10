@@ -98,7 +98,10 @@ export default function Projects() {
           <h1>Projects</h1>
           <div className="page-sub">{projects.length} total</div>
         </div>
-        {canEdit && <button className="btn primary" onClick={() => setShowForm(true)}>+ New project</button>}
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn" onClick={() => navigate('/team')}>Team</button>
+          {canEdit && <button className="btn primary" onClick={() => setShowForm(true)}>+ New project</button>}
+        </div>
       </div>
 
       <div className="card" style={{ padding: '8px 20px' }}>

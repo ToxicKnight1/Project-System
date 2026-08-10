@@ -46,9 +46,8 @@ export default function App() {
           <nav className="topbar">
             <div className="brand">Project <span>Portal</span></div>
             <div className="topbar-links">
-              <NavLink to="/" end className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Dashboard</NavLink>
               <NavLink to="/projects" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Projects</NavLink>
-              <NavLink to="/team" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Team</NavLink>
+              <NavLink to="/" end className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Dashboard</NavLink>
             </div>
           </nav>
           <div className="user-corner">
