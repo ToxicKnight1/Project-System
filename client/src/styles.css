@@ -297,6 +297,15 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .chat-msg.user .chat-bubble { background: var(--accent); color: #06131b; border-bottom-right-radius: 4px; }
 .chat-msg.assistant .chat-bubble { background: var(--bg); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
 .chat-bubble.thinking { color: var(--text-faint); font-style: italic; }
+.chat-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border); margin-bottom: 12px; font-size: 0.8rem; }
+.chat-name { font-size: 0.68rem; font-weight: 800; opacity: 0.75; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.05em; }
+.chat-bubble.breakdown {
+  max-width: 100%; width: 100%; background: var(--surface-2);
+  border: 1px solid var(--accent); border-left: 4px solid var(--accent);
+  border-radius: 12px; font-size: 0.85rem;
+}
+.chat-breakdown-title { font-weight: 800; color: var(--text-strong); margin-bottom: 10px; font-size: 0.95rem; }
+.btn.attach { padding: 10px 14px; font-size: 1rem; line-height: 1; }
 .chat-input { display: flex; gap: 10px; margin-top: 14px; }
 .chat-input input {
   flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px;

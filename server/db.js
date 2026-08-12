@@ -75,6 +75,18 @@ CREATE TABLE IF NOT EXISTS documents (
 );
 `);
 
+db.exec(`
+CREATE TABLE IF NOT EXISTS ai_messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK (role IN ('user','assistant')),
+  kind TEXT NOT NULL DEFAULT 'chat' CHECK (kind IN ('chat','breakdown')),
+  content TEXT NOT NULL,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+`);
+
 // Lightweight migrations for databases created before newer fields existed.
 const userCols = db.prepare('PRAGMA table_info(users)').all();
 if (!userCols.some((c) => c.name === 'department')) {

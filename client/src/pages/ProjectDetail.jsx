@@ -329,7 +329,7 @@ export default function ProjectDetail() {
             )}
           </div>
         )}
-        {tab === 'compare' && <CompareChat projectId={project.id} docCount={project.documents.length} />}
+        {tab === 'compare' && <CompareChat projectId={project.id} onDocsChanged={load} />}
 
         {tab === 'details' && (
           <div className="card">
