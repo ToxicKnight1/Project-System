@@ -47,7 +47,7 @@ export default function App() {
             <div className="brand">Project <span>Portal</span></div>
             <div className="topbar-links">
               <NavLink to="/projects" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Projects</NavLink>
-              <NavLink to="/" end className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Dashboard</NavLink>
+              <NavLink to="/dashboard" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Dashboard</NavLink>
             </div>
           </nav>
           <div className="user-corner">
@@ -59,11 +59,12 @@ export default function App() {
           </div>
           <main className="main">
             <Routes>
-              <Route path="/" element={<Dashboard />} />
+              <Route path="/" element={<Navigate to="/projects" replace />} />
+              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/projects/:id" element={<ProjectDetail />} />
               <Route path="/team" element={<Team />} />
-              <Route path="*" element={<Navigate to="/" />} />
+              <Route path="*" element={<Navigate to="/projects" />} />
             </Routes>
           </main>
         </div>
