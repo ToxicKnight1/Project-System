@@ -12,10 +12,25 @@ app.use('/api', routes);
 app.use('/api', aiRoutes);
 
 // Serve the built React app (client/dist) in production.
+// Hashed assets are cached forever; index.html must never be cached, so every
+// page load picks up the current bundle after a deploy (stale HTML pointing at
+// a deleted bundle renders a blank page).
 const distDir = path.join(__dirname, '..', 'client', 'dist');
 if (fs.existsSync(distDir)) {
-  app.use(express.static(distDir));
-  app.get(/^(?!\/api).*/, (req, res) => res.sendFile(path.join(distDir, 'index.html')));
+  app.use(express.static(distDir, {
+    index: false,
+    setHeaders: (res, filePath) => {
+      if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      } else {
+        res.setHeader('Cache-Control', 'no-cache');
+      }
+    },
+  }));
+  app.get(/^(?!\/api).*/, (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.sendFile(path.join(distDir, 'index.html'));
+  });
 }
 
 // JSON error handler (multer errors, unexpected failures)
