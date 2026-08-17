@@ -28,6 +28,13 @@ export default function Login() {
         mode === 'signin'
           ? await api('/auth/login', { method: 'POST', body: { email: form.email, password: form.password } })
           : await api('/auth/register', { method: 'POST', body: { ...form, role } });
+      // Shift the role pill to the account's actual role so signing in as an
+      // Admin visibly selects Admin (and Operations likewise) before entering.
+      const actual = res.user.role === 'manager' ? 'operations' : res.user.role === 'admin' ? 'admin' : null;
+      if (mode === 'signin' && actual && actual !== role) {
+        setRole(actual);
+        await new Promise((r) => setTimeout(r, 450));
+      }
       setToken(res.token);
       setUser(res.user);
     } catch (e2) {
