@@ -9,17 +9,33 @@ import './styles.css';
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { failed: false };
+    this.state = { failed: false, detail: '' };
   }
-  static getDerivedStateFromError() {
-    return { failed: true };
+  static getDerivedStateFromError(error) {
+    return { failed: true, detail: String(error && error.message ? error.message : error) };
+  }
+  componentDidCatch(error, info) {
+    try {
+      fetch('/api/client-error', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: String(error && error.message ? error.message : error),
+          stack: `${error && error.stack ? error.stack : ''}\nCOMPONENT:${info && info.componentStack ? info.componentStack : ''}`,
+          url: window.location.href,
+        }),
+      }).catch(() => {});
+    } catch { /* reporting must never crash the boundary */ }
   }
   render() {
     if (!this.state.failed) return this.props.children;
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, color: '#e6edf3', textAlign: 'center', padding: 24 }}>
         <div style={{ fontSize: '1.1rem', fontWeight: 800 }}>Something went wrong loading this page.</div>
-        <div style={{ color: '#8b949e', maxWidth: 420 }}>This usually happens right after an update. Reloading fixes it.</div>
+        <div style={{ color: '#8b949e', maxWidth: 420 }}>The error has been reported automatically. Reloading usually fixes it.</div>
+        {this.state.detail && (
+          <code style={{ color: '#f85149', fontSize: '0.75rem', maxWidth: 560, overflowWrap: 'break-word' }}>{this.state.detail}</code>
+        )}
         <button className="btn primary" onClick={() => window.location.reload(true)}>Reload the portal</button>
       </div>
     );

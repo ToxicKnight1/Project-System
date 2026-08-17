@@ -75,8 +75,25 @@ router.post('/auth/change-password', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+// Crash reports from the frontend error boundary (no auth — a crash can happen
+// pre-login). Trimmed hard so it cannot be abused as storage.
+router.post('/client-error', (req, res) => {
+  const b = req.body || {};
+  db.prepare('INSERT INTO client_errors (message, stack, url, user_agent) VALUES (?, ?, ?, ?)').run(
+    String(b.message || 'unknown').slice(0, 500),
+    String(b.stack || '').slice(0, 4000),
+    String(b.url || '').slice(0, 300),
+    String(req.headers['user-agent'] || '').slice(0, 300),
+  );
+  res.json({ ok: true });
+});
+
 // Everything below requires a valid login.
 router.use(requireAuth);
+
+router.get('/client-errors', requireOps, (req, res) => {
+  res.json(db.prepare('SELECT * FROM client_errors ORDER BY id DESC LIMIT 50').all());
+});
 
 // ── Visibility helpers ────────────────────────────────────────────
 // Operations and viewers see every submitted project; admins (requesters)
