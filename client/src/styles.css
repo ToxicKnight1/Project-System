@@ -71,6 +71,71 @@ a { color: var(--accent); text-decoration: none; }
     url('/dashboard-bg.jpg') center / cover no-repeat;
 }
 
+/* ── Projects: Active / Completed columns ── */
+.proj-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
+.proj-col-title { font-size: 1rem; font-weight: 800; color: var(--text-strong); margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.proj-col.completed .proj-col-title { color: var(--text-muted); }
+.proj-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 12px 10px; border-radius: 10px; cursor: pointer;
+}
+.proj-row:hover { background: var(--surface-2); }
+.proj-meta { display: flex; align-items: center; gap: 10px; flex-shrink: 0; font-size: 0.8rem; }
+
+/* ── Operations dashboard rows ── */
+.ops-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 14px;
+  padding: 12px 8px; border-bottom: 1px solid var(--border);
+}
+.ops-row:last-child { border-bottom: none; }
+.ops-name { cursor: pointer; min-width: 0; }
+.ops-controls { display: flex; align-items: center; gap: 10px; flex-shrink: 0; flex-wrap: wrap; }
+.ops-controls select, .ops-controls input[type="date"] {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); padding: 7px 10px; font-size: 0.8rem;
+}
+
+/* ── Project detail: form + side cards ── */
+.detail-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; align-items: start; }
+.detail-card { margin-bottom: 20px; }
+.detail-card h3 { font-size: 0.9rem; font-weight: 800; color: var(--text-strong); margin-bottom: 12px; }
+.form-tbl td:first-child { color: var(--text-muted); width: 40%; font-size: 0.78rem; }
+.task-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+.task-row.sub { margin-left: 26px; }
+.task-check { display: flex; gap: 10px; align-items: center; cursor: pointer; font-size: 0.86rem; }
+.task-check input { accent-color: var(--accent); }
+.task-done { text-decoration: line-through; color: var(--text-faint); }
+.task-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.task-add { display: flex; gap: 8px; margin-top: 12px; }
+.task-add.sub { margin-left: 26px; }
+.task-add input {
+  flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); padding: 8px 12px; font-size: 0.84rem;
+}
+.task-add input:focus { outline: none; border-color: var(--accent); }
+.comment { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; white-space: pre-wrap; }
+.comment:last-of-type { border-bottom: none; }
+.comment-head { font-size: 0.74rem; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; }
+.ops-panel { border-left: 3px solid var(--accent); }
+
+/* ── Notification bell ── */
+.bell-wrap { position: relative; margin-left: auto; }
+.bell { position: relative; font-size: 0.95rem; }
+.bell-badge {
+  position: absolute; top: -6px; right: -6px; background: var(--bad); color: #fff;
+  font-size: 0.62rem; font-weight: 800; border-radius: 99px; padding: 2px 6px;
+}
+.bell-panel {
+  position: absolute; right: 0; top: calc(100% + 8px); width: 340px; max-height: 420px;
+  overflow-y: auto; z-index: 60; box-shadow: 0 18px 44px rgba(0,0,0,.5);
+}
+.bell-item { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
+.bell-item:last-child { border-bottom: none; }
+
+@media (max-width: 900px) {
+  .proj-columns, .detail-grid { grid-template-columns: 1fr; gap: 20px; }
+}
+
 /* ── Buttons ── */
 .btn {
   background: var(--surface-2); color: var(--text); border: 1px solid var(--border);

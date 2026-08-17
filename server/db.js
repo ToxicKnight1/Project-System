@@ -76,6 +76,31 @@ CREATE TABLE IF NOT EXISTS documents (
 `);
 
 db.exec(`
+CREATE TABLE IF NOT EXISTS budget_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  label TEXT NOT NULL,
+  amount REAL NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS comments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  content TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
+  read INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS ai_messages (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -98,8 +123,16 @@ for (const [col, ddl] of [
   ['expense_type', "ALTER TABLE projects ADD COLUMN expense_type TEXT DEFAULT ''"],
   ['priority', "ALTER TABLE projects ADD COLUMN priority TEXT DEFAULT ''"],
   ['intake', "ALTER TABLE projects ADD COLUMN intake TEXT DEFAULT ''"],
+  ['owner_id', 'ALTER TABLE projects ADD COLUMN owner_id INTEGER REFERENCES users(id) ON DELETE SET NULL'],
+  ['approval_status', "ALTER TABLE projects ADD COLUMN approval_status TEXT NOT NULL DEFAULT 'awaiting_approval'"],
+  ['priority_tier', "ALTER TABLE projects ADD COLUMN priority_tier TEXT DEFAULT ''"],
+  ['urs_document_id', 'ALTER TABLE projects ADD COLUMN urs_document_id INTEGER REFERENCES documents(id) ON DELETE SET NULL'],
 ]) {
   if (!projectCols.some((c) => c.name === col)) db.exec(ddl);
+}
+const taskCols = db.prepare('PRAGMA table_info(tasks)').all();
+if (!taskCols.some((c) => c.name === 'parent_id')) {
+  db.exec('ALTER TABLE tasks ADD COLUMN parent_id INTEGER REFERENCES tasks(id) ON DELETE CASCADE');
 }
 
 // Seed a first admin so the portal is usable immediately after deploy.

@@ -10,6 +10,51 @@ import Team from './pages/Team.jsx';
 const AuthCtx = createContext(null);
 export const useAuth = () => useContext(AuthCtx);
 
+function NotificationBell() {
+  const [items, setItems] = useState([]);
+  const [open, setOpen] = useState(false);
+  const unread = items.filter((n) => !n.read).length;
+
+  const load = () => api('/notifications').then(setItems).catch(() => {});
+  useEffect(() => {
+    load();
+    const t = setInterval(load, 60000);
+    return () => clearInterval(t);
+  }, []);
+
+  const toggle = async () => {
+    const opening = !open;
+    setOpen(opening);
+    if (opening && unread > 0) {
+      await api('/notifications/read', { method: 'POST' }).catch(() => {});
+      setItems((list) => list.map((n) => ({ ...n, read: 1 })));
+    }
+  };
+
+  return (
+    <div className="bell-wrap">
+      <button className="btn small bell" onClick={toggle} title="Notifications">
+        🔔{unread > 0 && <span className="bell-badge">{unread}</span>}
+      </button>
+      {open && (
+        <div className="bell-panel card">
+          <b style={{ fontSize: '0.85rem' }}>Notifications</b>
+          {items.length === 0 ? (
+            <div className="faint" style={{ padding: '10px 0' }}>Nothing yet.</div>
+          ) : (
+            items.map((n) => (
+              <div key={n.id} className="bell-item">
+                {n.content}
+                <div className="faint" style={{ fontSize: '0.68rem', marginTop: 2 }}>{fmtDate(n.created_at)}</div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -34,6 +79,9 @@ export default function App() {
 
   if (loading) return <div className="login-wrap muted">Loading…</div>;
 
+  const isOps = user?.role === 'manager';
+  const home = isOps ? '/dashboard' : '/projects';
+
   return (
     <AuthCtx.Provider value={{ user, setUser, logout }}>
       {!user ? (
@@ -46,9 +94,10 @@ export default function App() {
           <nav className="topbar">
             <div className="brand">Project <span>Portal</span></div>
             <div className="topbar-links">
+              {isOps && <NavLink to="/dashboard" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Dashboard</NavLink>}
               <NavLink to="/projects" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Projects</NavLink>
-              <NavLink to="/dashboard" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Dashboard</NavLink>
             </div>
+            <NotificationBell />
           </nav>
           <div className="user-corner">
             <div className="whoami">
@@ -59,12 +108,12 @@ export default function App() {
           </div>
           <main className="main">
             <Routes>
-              <Route path="/" element={<Navigate to="/projects" replace />} />
-              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/" element={<Navigate to={home} replace />} />
+              <Route path="/dashboard" element={isOps ? <Dashboard /> : <Navigate to="/projects" replace />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/projects/:id" element={<ProjectDetail />} />
               <Route path="/team" element={<Team />} />
-              <Route path="*" element={<Navigate to="/projects" />} />
+              <Route path="*" element={<Navigate to={home} />} />
             </Routes>
           </main>
         </div>
@@ -76,30 +125,29 @@ export default function App() {
 // Shared helpers used across pages
 export const ROLE_LABELS = { admin: 'Admin', manager: 'Operations', viewer: 'Viewer' };
 
-export const STATUS_LABELS = {
-  planning: ['Planning', 'blue'],
-  active: ['Active', 'green'],
-  on_hold: ['On hold', 'yellow'],
+export const APPROVAL_LABELS = {
+  draft: ['Draft', 'gray'],
+  awaiting_approval: ['Awaiting approval', 'yellow'],
+  approved: ['Approved', 'green'],
   completed: ['Completed', 'gray'],
-  cancelled: ['Cancelled', 'red'],
-  todo: ['To do', 'gray'],
-  in_progress: ['In progress', 'blue'],
-  done: ['Done', 'green'],
-  pending: ['Pending', 'yellow'],
-  accepted: ['Accepted', 'green'],
-  rejected: ['Rejected', 'red'],
-  low: ['Low', 'gray'],
-  medium: ['Medium', 'blue'],
-  high: ['High', 'red'],
+};
+
+export const TIER_LABELS = {
   critical: ['Critical', 'red'],
-  urgent_important: ['Urgent & Important', 'red'],
-  urgent_low: ['Urgent, Lower Impact', 'yellow'],
-  important_not_urgent: ['Important, Not Urgent', 'blue'],
+  urgent: ['Urgent', 'red'],
+  important: ['Important', 'yellow'],
+  routine: ['Routine', 'blue'],
   desirable: ['Desirable', 'gray'],
 };
 
-export function Badge({ value }) {
-  const [label, color] = STATUS_LABELS[value] || [value, 'gray'];
+export function ApprovalBadge({ value }) {
+  const [label, color] = APPROVAL_LABELS[value] || [value, 'gray'];
+  return <span className={`badge ${color}`}>{label}</span>;
+}
+
+export function TierBadge({ value }) {
+  if (!value) return null;
+  const [label, color] = TIER_LABELS[value] || [value, 'gray'];
   return <span className={`badge ${color}`}>{label}</span>;
 }
 

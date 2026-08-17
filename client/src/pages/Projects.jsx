@@ -1,68 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
-import { useAuth, Badge, fmtDate, fmtMoney } from '../App.jsx';
+import { useAuth, ApprovalBadge, TierBadge, fmtMoney, fmtDate } from '../App.jsx';
 import IntakeWizard from './IntakeWizard.jsx';
 
-const EMPTY = { name: '', client: '', description: '', status: 'planning', start_date: '', due_date: '', budget: '', manager_id: '' };
-
-export function ProjectForm({ initial, users, onSave, onClose }) {
-  const [form, setForm] = useState({ ...EMPTY, ...initial, budget: initial?.budget ?? '', manager_id: initial?.manager_id ?? '' });
-  const [err, setErr] = useState('');
-  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
-
-  const submit = async (e) => {
-    e.preventDefault();
-    try {
-      await onSave({
-        ...form,
-        budget: form.budget === '' ? null : Number(form.budget),
-        manager_id: form.manager_id === '' ? null : Number(form.manager_id),
-        start_date: form.start_date || null,
-        due_date: form.due_date || null,
-      });
-    } catch (e2) {
-      setErr(e2.message);
-    }
-  };
-
+function ProjectRow({ p, onOpen, onResume }) {
+  const isDraft = p.approval_status === 'draft';
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <form className="modal" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
-        <h2>{initial?.id ? 'Edit project' : 'New project'}</h2>
-        {err && <div className="form-err">{err}</div>}
-        <div className="field"><label>Name</label><input value={form.name} onChange={set('name')} required autoFocus /></div>
-        <div className="form-row">
-          <div className="field"><label>Client</label><input value={form.client} onChange={set('client')} /></div>
-          <div className="field"><label>Status</label>
-            <select value={form.status} onChange={set('status')}>
-              <option value="planning">Planning</option>
-              <option value="active">Active</option>
-              <option value="on_hold">On hold</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </div>
+    <div className="proj-row" onClick={() => (isDraft ? onResume(p) : onOpen(p))}>
+      <div className="proj-main">
+        <b>{p.name}</b>
+        <div className="faint" style={{ fontSize: '0.76rem' }}>
+          {[p.department, p.owner_name && `Raised by ${p.owner_name}`].filter(Boolean).join(' · ')}
         </div>
-        <div className="form-row">
-          <div className="field"><label>Start date</label><input type="date" value={form.start_date || ''} onChange={set('start_date')} /></div>
-          <div className="field"><label>Due date</label><input type="date" value={form.due_date || ''} onChange={set('due_date')} /></div>
-        </div>
-        <div className="form-row">
-          <div className="field"><label>Budget (USD)</label><input type="number" min="0" step="0.01" value={form.budget} onChange={set('budget')} /></div>
-          <div className="field"><label>Project manager</label>
-            <select value={form.manager_id} onChange={set('manager_id')}>
-              <option value="">— Unassigned —</option>
-              {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-            </select>
-          </div>
-        </div>
-        <div className="field"><label>Description</label><textarea rows={3} value={form.description} onChange={set('description')} /></div>
-        <div className="actions">
-          <button type="button" className="btn" onClick={onClose}>Cancel</button>
-          <button className="btn primary">{initial?.id ? 'Save changes' : 'Create project'}</button>
-        </div>
-      </form>
+      </div>
+      <div className="proj-meta">
+        {isDraft ? <span className="badge gray">Draft</span> : <ApprovalBadge value={p.approval_status} />}
+        <TierBadge value={p.priority_tier} />
+        <span className="muted num">{fmtMoney(p.budget_total || p.budget)}</span>
+        <span className="faint">{p.due_date ? `Due ${fmtDate(p.due_date)}` : ''}</span>
+        {isDraft && <button className="btn small primary" onClick={(e) => { e.stopPropagation(); onResume(p); }}>Resume</button>}
+      </div>
     </div>
   );
 }
@@ -70,26 +28,25 @@ export function ProjectForm({ initial, users, onSave, onClose }) {
 export default function Projects() {
   const { user } = useAuth();
   const [projects, setProjects] = useState(null);
-  const [users, setUsers] = useState([]);
-  const [showForm, setShowForm] = useState(false);
+  const [wizard, setWizard] = useState(null); // null | 'new' | project (resume/edit)
   const [err, setErr] = useState('');
   const navigate = useNavigate();
-  const canEdit = user.role !== 'viewer';
+  const canCreate = user.role !== 'viewer';
 
-  const load = () => {
-    api('/projects').then(setProjects).catch((e) => setErr(e.message));
-    api('/users').then((all) => setUsers(all.filter((u) => u.active))).catch(() => {});
-  };
-  useEffect(() => { load(); }, []);
+  const load = () => api('/projects').then(setProjects).catch((e) => setErr(e.message));
+  useEffect(load, []);
 
-  const create = async (body) => {
-    const p = await api('/projects', { method: 'POST', body });
-    setShowForm(false);
-    navigate(`/projects/${p.id}`);
+  const done = (project, wasDraft) => {
+    setWizard(null);
+    if (wasDraft) load();
+    else navigate(`/projects/${project.id}`);
   };
 
   if (err) return <div className="form-err">{err}</div>;
   if (!projects) return <div className="muted">Loading…</div>;
+
+  const active = projects.filter((p) => p.approval_status !== 'completed');
+  const completed = projects.filter((p) => p.approval_status === 'completed');
 
   return (
     <>
@@ -99,37 +56,42 @@ export default function Projects() {
           <div className="page-sub">{projects.length} total</div>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn" onClick={() => navigate('/team')}>Team</button>
-          {canEdit && <button className="btn primary" onClick={() => setShowForm(true)}>+ New project</button>}
+          {user.role === 'manager' && <button className="btn" onClick={() => navigate('/team')}>Team</button>}
+          {canCreate && <button className="btn primary" onClick={() => setWizard('new')}>+ New project</button>}
         </div>
       </div>
 
-      <div className="card" style={{ padding: '8px 20px' }}>
-        {projects.length === 0 ? (
-          <div className="empty">No projects yet.</div>
-        ) : (
-          <table className="tbl">
-            <thead>
-              <tr><th>Project</th><th>Status</th><th>Manager</th><th>Tasks</th><th className="num">Budget</th><th className="num">Accepted quotes</th><th>Due</th></tr>
-            </thead>
-            <tbody>
-              {projects.map((p) => (
-                <tr key={p.id} className="clickable" onClick={() => navigate(`/projects/${p.id}`)}>
-                  <td><b>{p.name}</b><div className="faint" style={{ fontSize: '0.74rem' }}>{p.client}</div></td>
-                  <td><Badge value={p.status} /></td>
-                  <td className="muted">{p.manager_name || '—'}</td>
-                  <td className="muted">{p.done_count}/{p.task_count}</td>
-                  <td className="num muted">{fmtMoney(p.budget)}</td>
-                  <td className="num muted">{fmtMoney(p.accepted_total)}</td>
-                  <td className="faint">{fmtDate(p.due_date)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+      <div className="proj-columns">
+        <div className="proj-col card">
+          <h2 className="proj-col-title">Active</h2>
+          {active.length === 0 ? (
+            <div className="empty">No active projects.</div>
+          ) : (
+            active.map((p) => (
+              <ProjectRow key={p.id} p={p} onOpen={(x) => navigate(`/projects/${x.id}`)} onResume={(x) => setWizard(x)} />
+            ))
+          )}
+        </div>
+
+        <div className="proj-col card completed">
+          <h2 className="proj-col-title">Completed</h2>
+          {completed.length === 0 ? (
+            <div className="empty">Nothing completed yet.</div>
+          ) : (
+            completed.map((p) => (
+              <ProjectRow key={p.id} p={p} onOpen={(x) => navigate(`/projects/${x.id}`)} onResume={() => {}} />
+            ))
+          )}
+        </div>
       </div>
 
-      {showForm && <IntakeWizard onSave={create} onClose={() => setShowForm(false)} />}
+      {wizard && (
+        <IntakeWizard
+          existing={wizard === 'new' ? null : wizard}
+          onDone={done}
+          onClose={() => setWizard(null)}
+        />
+      )}
     </>
   );
 }

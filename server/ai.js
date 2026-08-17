@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const Anthropic = require('@anthropic-ai/sdk');
 const { db, UPLOAD_DIR } = require('./db');
-const { requireAuth, requireRole } = require('./auth');
+const { requireAuth, requireOps } = require('./auth');
 
 const router = express.Router();
 
@@ -16,27 +16,29 @@ const HISTORY_LIMIT = 40;
 
 const SYSTEM_PROMPT = `You are the quote comparison assistant inside Central Pharma's project management portal. Operations staff upload supplier quotes and rely on you for logical, measured analysis so they can exercise their own judgment from an accurate picture.
 
+Everything you do centres on THREE decision points, in this order:
+1. URS FIT — how closely each quote meets the User Requirement Specification (URS) attached to the project. Express this as an alignment percentage with a one-line justification (e.g. "≈90% in line with the URS — meets all functional requirements but omits the required validation documentation").
+2. PRICE — comparable costs in pounds sterling (£), VAT treatment noted, against the project budget where known.
+3. TIMELINE — lead time, installation duration, and fit against the project's target date.
+
 Conversation style:
-- This is a chat with busy operations staff. Keep ordinary replies short and plain — a few sentences or a compact list. Save the depth for the full breakdown, which the user requests explicitly.
-- At the start of a conversation, after a one-line greeting that names the project, ask AT MOST four short questions in a single message to establish the decision picture: what matters most to them (price, speed, quality, reliability), any hard deadline, any must-have requirements or exclusions, and how firm the budget is. Number the questions so they are easy to answer in one reply.
-- Never interrogate. If the user answers only some questions, or says to just get on with it, proceed and state your working assumptions instead of asking again.
-- If no quote documents are attached yet, say so and ask them to attach the supplier quotes using the paperclip in this chat (or the Documents tab).
+- Keep ordinary replies short and plain — a few sentences or a compact list. Save the depth for the full breakdown, which the user requests explicitly.
+- When the conversation opens, greet in one line, confirm which documents you can see (URS, form details, quotes), and ask AT MOST two or three short numbered questions — only about price, timeline, or URS priorities, and only what you genuinely need. Never interrogate; if answers don't come, proceed with stated assumptions.
+- If no quote documents are attached, say what is missing and ask for them via the paperclip. If no URS is present, flag that URS-fit scoring cannot be done until it is imported.
 
 Analysis rules:
-- Check whether quotes cover the same scope before comparing prices. Flag any scope mismatch prominently (e.g. one supplier quoting fewer work areas, excluded services, different specifications, different deck heights or footprints).
-- List pros AND cons for every supplier, covering price, scope coverage, timeline/installation speed, exclusions, warranties, payment terms, and reliability/reputation where evidenced in the documents. A more expensive supplier may still be the better choice — say so when the evidence supports it.
-- Use pounds sterling (£) for all amounts. Note VAT treatment when quotes differ on it.
-- Be explicit about assumptions, missing information, and what the operator should clarify with suppliers before deciding.
-- Give a reasoned recommendation when asked, but make clear the final judgment rests with the operator.
-- Only draw on the project context and documents provided; never invent figures. If the documents don't contain something, say so.
+- Score every quote against the URS requirement by requirement where possible; call out each requirement a supplier fails, excludes, or leaves ambiguous.
+- Check quotes cover the same scope before comparing prices; flag mismatches prominently.
+- A more expensive supplier with higher URS fit may still be the better choice — say so when the evidence supports it.
+- Be explicit about assumptions and missing information; never invent figures. The final judgment rests with the operator.
 
-When the user requests the full breakdown, produce a single comprehensive report with these sections, using plain headings and short tables or bullet lists:
-1. SCOPE CHECK — are the quotes like-for-like? List every mismatch.
-2. COST COMPARISON — a table of comparable costs in £, with VAT treatment noted.
-3. SUPPLIER PROFILES — pros and cons for each supplier.
-4. RISKS & GAPS — missing information, expiring quotes, assumptions each supplier makes.
-5. QUESTIONS TO ASK SUPPLIERS — the clarifications worth getting before committing.
-6. RECOMMENDATION — which supplier and why, weighted by the user's stated priorities, with the runner-up and the conditions under which the runner-up would win.`;
+When the user requests the full breakdown, produce a single comprehensive report with these sections:
+1. URS FIT — per supplier: alignment %, requirements met, requirements missed or unclear.
+2. PRICE — comparable cost table in £, VAT noted, ranked, set against budget.
+3. TIMELINE — lead times and installation duration per supplier vs the target date.
+4. RISKS & GAPS — missing information, expiring quotes, assumptions.
+5. QUESTIONS TO ASK SUPPLIERS — clarifications worth getting before committing.
+6. RECOMMENDATION — which supplier and why across URS fit, price, and timeline, with the runner-up and the conditions under which the runner-up would win.`;
 
 // Convert this project's uploaded documents into Claude content blocks.
 function buildDocBlocks(docs) {
@@ -81,23 +83,43 @@ function buildDocBlocks(docs) {
   return { blocks, skipped };
 }
 
-function buildContextText(project, quotes, skipped) {
+function buildFormText(project) {
   const intake = project.intake ? (() => { try { return JSON.parse(project.intake); } catch { return null; } })() : null;
+  const items = db.prepare('SELECT * FROM budget_items WHERE project_id = ? ORDER BY id').all(project.id);
+  const total = items.reduce((s, i) => s + i.amount, 0);
   const lines = [
-    `PROJECT: ${project.name}`,
-    project.client && `Client: ${project.client}`,
+    `PROJECT FORM — ${project.name}`,
     project.department && `Department: ${project.department}`,
-    project.priority && `Priority: ${project.priority}`,
-    project.budget != null && `Budget: £${project.budget}`,
-    project.due_date && `Target date: ${project.due_date}`,
-    project.description && `Description: ${project.description}`,
+    project.expense_type && `Expense type: ${project.expense_type}`,
+    project.priority_tier && `Priority tier (set by Operations): ${project.priority_tier}`,
+    `Status: ${project.approval_status}`,
+    project.due_date && `Target date (set by Operations): ${project.due_date}`,
+    project.description && `Goal: ${project.description}`,
   ].filter(Boolean);
+  if (items.length) {
+    lines.push('', 'BUDGET BREAKDOWN:');
+    for (const i of items) lines.push(`- ${i.label}: £${i.amount}`);
+    lines.push(`- TOTAL: £${total}`);
+  } else if (project.budget != null) {
+    lines.push(`Budget: £${project.budget}`);
+  }
   if (intake) {
-    lines.push('', 'PROJECT INTAKE ANSWERS:');
+    lines.push('', 'FORM ANSWERS:');
     for (const [k, v] of Object.entries(intake)) {
       if (v && String(v).trim()) lines.push(`- ${k}: ${Array.isArray(v) ? v.join(', ') : v}`);
     }
   }
+  return lines.join('\n');
+}
+
+function buildContextText(project, quotes, skipped) {
+  const lines = [buildFormText(project)];
+  const ursDoc = project.urs_document_id
+    ? db.prepare('SELECT * FROM documents WHERE id = ?').get(project.urs_document_id)
+    : null;
+  lines.push('', ursDoc
+    ? `URS DOCUMENT: "${ursDoc.original_name}" is attached above — score every quote's alignment against it.`
+    : 'URS DOCUMENT: none attached yet — URS-fit scoring is not possible until it is provided.');
   if (quotes.length) {
     lines.push('', 'QUOTES LOGGED IN THE PORTAL:');
     for (const q of quotes) {
@@ -200,7 +222,7 @@ router.get('/projects/:id/ai-chat', requireAuth, getProject, (req, res) => {
 });
 
 // Opens the conversation: the assistant greets and asks its short question set.
-router.post('/projects/:id/ai-chat/start', requireAuth, requireRole('manager'), requireConfigured, getProject, async (req, res) => {
+router.post('/projects/:id/ai-chat/start', requireAuth, requireOps, requireConfigured, getProject, async (req, res) => {
   const existing = loadHistory(req.project.id);
   if (existing.length > 0) return res.json({ messages: existing });
   try {
@@ -217,7 +239,7 @@ router.post('/projects/:id/ai-chat/start', requireAuth, requireRole('manager'), 
 });
 
 // Send a chat message.
-router.post('/projects/:id/ai-chat', requireAuth, requireRole('manager'), requireConfigured, getProject, async (req, res) => {
+router.post('/projects/:id/ai-chat', requireAuth, requireOps, requireConfigured, getProject, async (req, res) => {
   const text = String((req.body || {}).message || '').trim().slice(0, 12000);
   if (!text) return res.status(400).json({ error: 'Message required' });
   try {
@@ -232,7 +254,7 @@ router.post('/projects/:id/ai-chat', requireAuth, requireRole('manager'), requir
 });
 
 // Generate the comprehensive breakdown.
-router.post('/projects/:id/ai-chat/breakdown', requireAuth, requireRole('manager'), requireConfigured, getProject, async (req, res) => {
+router.post('/projects/:id/ai-chat/breakdown', requireAuth, requireOps, requireConfigured, getProject, async (req, res) => {
   const trigger = 'Please generate the full supplier comparison breakdown now, following the six-section structure. Use everything discussed in this conversation plus the attached documents and logged quotes. Where I have not stated a priority, use balanced weighting and say so.';
   try {
     const reply = await callModel(req.project, loadHistory(req.project.id), trigger);
@@ -245,8 +267,34 @@ router.post('/projects/:id/ai-chat/breakdown', requireAuth, requireRole('manager
   }
 });
 
+// Import the project form + URS into the chat as an explicit reference point.
+router.post('/projects/:id/ai-chat/import-form', requireAuth, requireOps, requireConfigured, getProject, async (req, res) => {
+  const p = req.project;
+  const ursDoc = p.urs_document_id ? db.prepare('SELECT * FROM documents WHERE id = ?').get(p.urs_document_id) : null;
+  const importText = [
+    'FORM / URS IMPORT — use this as the reference baseline for all quote assessment:',
+    '',
+    buildFormText(p),
+    '',
+    ursDoc
+      ? `The URS document "${ursDoc.original_name}" is attached to this project — treat it as the authoritative requirement specification.`
+      : 'NOTE: no URS document is attached yet.',
+    '',
+    'Confirm in a few lines what you now have on record (form details, URS, and any quotes), and note anything still missing before quotes can be fully assessed.',
+  ].join('\n');
+  try {
+    const reply = await callModel(p, loadHistory(p.id), importText);
+    const insert = db.prepare("INSERT INTO ai_messages (project_id, role, kind, content, user_id) VALUES (?, ?, 'chat', ?, ?)");
+    insert.run(p.id, 'user', `Imported the project form${ursDoc ? ' and URS' : ''} for reference.`, req.user.id);
+    insert.run(p.id, 'assistant', reply, null);
+    res.json({ messages: loadHistory(p.id) });
+  } catch (e) {
+    aiErrorResponse(res, e);
+  }
+});
+
 // Reset the conversation (the documents and quotes are untouched).
-router.delete('/projects/:id/ai-chat', requireAuth, requireRole('manager'), getProject, (req, res) => {
+router.delete('/projects/:id/ai-chat', requireAuth, requireOps, getProject, (req, res) => {
   db.prepare('DELETE FROM ai_messages WHERE project_id = ?').run(req.project.id);
   res.json({ ok: true });
 });

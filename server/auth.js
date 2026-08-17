@@ -33,4 +33,13 @@ function requireRole(minRole) {
   };
 }
 
-module.exports = { signToken, requireAuth, requireRole };
+// Operations only — the 'manager' role. (Admins are requesters in this portal:
+// they raise and own project forms but do not approve, prioritise, or quote.)
+function requireOps(req, res, next) {
+  if (!req.user || req.user.role !== 'manager') {
+    return res.status(403).json({ error: 'Operations access required' });
+  }
+  next();
+}
+
+module.exports = { signToken, requireAuth, requireRole, requireOps };

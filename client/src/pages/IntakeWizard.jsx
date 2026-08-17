@@ -1,17 +1,10 @@
 import React, { useState } from 'react';
+import { api } from '../api.js';
 import { useAuth } from '../App.jsx';
 
 const DEPARTMENTS = ['Engineering', 'Production', 'Warehouse', 'Regulatory Affairs', 'Finance', 'IT', 'Operations', 'Other'];
 
 const STAKEHOLDERS = ['HSE and Facility', 'Operations', 'Engineering', 'Warehouse', 'Quality', 'IT', 'Customer Service', 'Abbott', 'Biotechnica'];
-
-const PRIORITIES = [
-  ['critical', 'Critical — Immediate business impact / production issue'],
-  ['urgent_important', 'Urgent & Important — High priority with significant business need'],
-  ['urgent_low', 'Urgent but Lower Impact — Time-sensitive but lower business impact'],
-  ['important_not_urgent', 'Important but Not Urgent — Valuable improvement that can be planned'],
-  ['desirable', 'Desirable — Optional enhancement or future improvement'],
-];
 
 const RISKS = [
   'Lack of required approvals or dependencies',
@@ -26,7 +19,7 @@ const RISKS = [
   'Any external dependencies',
 ];
 
-const STEPS = ['Basic Information', 'Project Overview', 'Business Value', 'Scope', 'Stakeholders', 'Timeline', 'Budget', 'Risks & Constraints'];
+const STEPS = ['Basic Information', 'Project Overview', 'Business Value', 'Scope', 'Stakeholders', 'Budget', 'Risks & Constraints', 'URS Attachment'];
 
 // Parse "180k", "£25,000", "1.2m" etc. into a number for the budget column.
 function parseBudget(text) {
@@ -39,32 +32,48 @@ function parseBudget(text) {
   return Number.isFinite(n) ? n : null;
 }
 
-export default function IntakeWizard({ onSave, onClose }) {
+const val = (intake, key) => (intake && intake[key]) || '';
+
+export default function IntakeWizard({ existing, onDone, onClose }) {
   const { user } = useAuth();
   const today = new Date().toISOString().slice(0, 10);
+  const intake = existing?.intake ? (() => { try { return JSON.parse(existing.intake); } catch { return null; } })() : null;
   const [step, setStep] = useState(0);
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  const [ursFile, setUrsFile] = useState(null);
   const [f, setF] = useState({
-    name: '', sponsor: '', owner: user?.name || '', department: user?.department || '', request_date: today, expense_type: '',
-    goal: '', background: '', problem: '',
-    importance: '', outcomes: '', success_criteria: '',
-    in_scope: '', out_of_scope: '',
-    exec_sponsor: '', stakeholders: [], beneficiaries: '',
-    priority: '', target_date: '',
-    estimated_budget: '',
-    risks: [],
+    name: existing?.name || '',
+    sponsor: val(intake, 'Project Sponsor (requested by)'),
+    owner: val(intake, 'Project Owner / Assigned') || user?.name || '',
+    department: existing?.department || user?.department || '',
+    request_date: val(intake, 'Date of Request') || today,
+    expense_type: existing?.expense_type ? existing.expense_type.split(', ').filter(Boolean) : [],
+    goal: existing?.description || '',
+    background: val(intake, 'Background or context'),
+    problem: val(intake, 'Problem it solves / opportunity'),
+    importance: val(intake, 'Why is this project important'),
+    outcomes: val(intake, 'Expected outcomes or benefits'),
+    success_criteria: val(intake, 'Success criteria'),
+    in_scope: val(intake, 'In scope'),
+    out_of_scope: val(intake, 'Out of scope'),
+    exec_sponsor: val(intake, 'Executive sponsor'),
+    stakeholders: val(intake, 'Key stakeholders / teams involved') || [],
+    beneficiaries: val(intake, 'Who will use or benefit'),
+    estimated_budget: val(intake, 'Estimated budget / cost'),
+    risks: val(intake, 'Known risks or blockers') || [],
   });
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const toggle = (k, v) => setF({ ...f, [k]: f[k].includes(v) ? f[k].filter((x) => x !== v) : [...f[k], v] });
+  const hasUrs = !!existing?.urs_document_id;
 
   const REQUIRED_BY_STEP = [
-    [['name', 'Project name'], ['sponsor', 'Project sponsor'], ['owner', 'Project owner'], ['department', 'Department'], ['request_date', 'Date of request'], ['expense_type', 'OpEx or CapEx']],
+    [['name', 'Project name'], ['sponsor', 'Project sponsor'], ['owner', 'Project owner'], ['department', 'Department'], ['request_date', 'Date of request'], ['expense_type', 'OpEx / CapEx']],
     [['goal', 'Goal or objective'], ['background', 'Background or context'], ['problem', 'Problem / opportunity']],
     [['importance', 'Why this project is important']],
     [],
     [['exec_sponsor', 'Project / executive sponsor'], ['stakeholders', 'Key stakeholders']],
-    [['priority', 'Priority level']],
+    [],
     [],
     [],
   ];
@@ -77,6 +86,61 @@ export default function IntakeWizard({ onSave, onClose }) {
     return '';
   };
 
+  const buildPayload = (draft) => ({
+    name: f.name,
+    description: f.goal,
+    department: f.department,
+    expense_type: f.expense_type.join(', '),
+    budget: parseBudget(f.estimated_budget),
+    draft,
+    intake: {
+      'Project Sponsor (requested by)': f.sponsor,
+      'Project Owner / Assigned': f.owner,
+      'Department / Team': f.department,
+      'Date of Request': f.request_date,
+      'OpEx or CapEx': f.expense_type.join(', '),
+      'Goal / Objective': f.goal,
+      'Background or context': f.background,
+      'Problem it solves / opportunity': f.problem,
+      'Why is this project important': f.importance,
+      'Expected outcomes or benefits': f.outcomes,
+      'Success criteria': f.success_criteria,
+      'In scope': f.in_scope,
+      'Out of scope': f.out_of_scope,
+      'Executive sponsor': f.exec_sponsor,
+      'Key stakeholders / teams involved': f.stakeholders,
+      'Who will use or benefit': f.beneficiaries,
+      'Estimated budget / cost': f.estimated_budget,
+      'Known risks or blockers': f.risks,
+    },
+  });
+
+  const persist = async (draft) => {
+    const payload = buildPayload(draft);
+    const project = existing
+      ? await api(`/projects/${existing.id}`, { method: 'PUT', body: payload })
+      : await api('/projects', { method: 'POST', body: payload });
+    if (ursFile) {
+      const fd = new FormData();
+      fd.append('file', ursFile);
+      await api(`/projects/${project.id}/documents?urs=1`, { method: 'POST', formData: fd });
+    }
+    return project;
+  };
+
+  const saveDraft = async () => {
+    if (!f.name.trim()) return setErr('Give the project a name before saving a draft');
+    setErr('');
+    setBusy(true);
+    try {
+      const project = await persist(true);
+      onDone(project, true);
+    } catch (e2) {
+      setErr(e2.message);
+      setBusy(false);
+    }
+  };
+
   const next = () => {
     const e = validate();
     if (e) return setErr(e);
@@ -85,43 +149,12 @@ export default function IntakeWizard({ onSave, onClose }) {
   };
 
   const submit = async () => {
-    const e = validate();
-    if (e) return setErr(e);
+    if (!ursFile && !hasUrs) return setErr('The URS document is required to submit the form for approval');
     setErr('');
     setBusy(true);
     try {
-      await onSave({
-        name: f.name,
-        description: f.goal,
-        status: 'planning',
-        start_date: f.request_date || null,
-        due_date: f.target_date || null,
-        budget: parseBudget(f.estimated_budget),
-        department: f.department,
-        expense_type: f.expense_type,
-        priority: f.priority,
-        intake: {
-          'Project Sponsor (requested by)': f.sponsor,
-          'Project Owner / Assigned': f.owner,
-          'Department / Team': f.department,
-          'Date of Request': f.request_date,
-          'OpEx or CapEx': f.expense_type,
-          'Goal / Objective': f.goal,
-          'Background or context': f.background,
-          'Problem it solves / opportunity': f.problem,
-          'Why is this project important': f.importance,
-          'Expected outcomes or benefits': f.outcomes,
-          'Success criteria': f.success_criteria,
-          'In scope': f.in_scope,
-          'Out of scope': f.out_of_scope,
-          'Executive sponsor': f.exec_sponsor,
-          'Key stakeholders / teams involved': f.stakeholders,
-          'Who will use or benefit': f.beneficiaries,
-          'Priority level': f.priority,
-          'Estimated budget / cost': f.estimated_budget,
-          'Known risks or blockers': f.risks,
-        },
-      });
+      const project = await persist(false);
+      onDone(project, false);
     } catch (e2) {
       setErr(e2.message);
       setBusy(false);
@@ -132,7 +165,7 @@ export default function IntakeWizard({ onSave, onClose }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal wizard" onClick={(e) => e.stopPropagation()}>
         <div className="wizard-head">
-          <h2>New Project Intake</h2>
+          <h2>{existing ? 'Project Form' : 'New Project Intake'}</h2>
           <div className="wizard-progress">
             <span>Step {step + 1} of {STEPS.length} — <b>{STEPS[step]}</b></span>
             <div className="progress-track"><div className="progress-fill" style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} /></div>
@@ -156,14 +189,14 @@ export default function IntakeWizard({ onSave, onClose }) {
               </div>
               <div className="field"><label>Date of request *</label><input type="date" value={f.request_date} onChange={set('request_date')} /></div>
             </div>
-            <div className="field"><label>Is this primarily an Operating Expense (OpEx) or a Capital Expense (CapEx)? *</label>
+            <div className="field"><label>Expense type — select all that apply *</label>
               <div className="choice-list">
-                <label className={`choice${f.expense_type === 'OpEx' ? ' selected' : ''}`}>
-                  <input type="radio" name="expense" checked={f.expense_type === 'OpEx'} onChange={() => setF({ ...f, expense_type: 'OpEx' })} />
+                <label className={`choice${f.expense_type.includes('OpEx') ? ' selected' : ''}`}>
+                  <input type="checkbox" checked={f.expense_type.includes('OpEx')} onChange={() => toggle('expense_type', 'OpEx')} />
                   <span><b>OpEx</b> — day-to-day operational or maintenance cost</span>
                 </label>
-                <label className={`choice${f.expense_type === 'CapEx' ? ' selected' : ''}`}>
-                  <input type="radio" name="expense" checked={f.expense_type === 'CapEx'} onChange={() => setF({ ...f, expense_type: 'CapEx' })} />
+                <label className={`choice${f.expense_type.includes('CapEx') ? ' selected' : ''}`}>
+                  <input type="checkbox" checked={f.expense_type.includes('CapEx')} onChange={() => toggle('expense_type', 'CapEx')} />
                   <span><b>CapEx</b> — new investment or major upgrade with long-term value</span>
                 </label>
               </div>
@@ -228,28 +261,15 @@ export default function IntakeWizard({ onSave, onClose }) {
         )}
 
         {step === 5 && (
-          <>
-            <div className="field"><label>How would you classify this project? (priority level) *</label>
-              <div className="choice-list">
-                {PRIORITIES.map(([v, label]) => (
-                  <label key={v} className={`choice${f.priority === v ? ' selected' : ''}`}>
-                    <input type="radio" name="priority" checked={f.priority === v} onChange={() => setF({ ...f, priority: v })} />
-                    <span>{label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div className="field"><label>Target / required completion date</label><input type="date" value={f.target_date} onChange={set('target_date')} /></div>
-          </>
-        )}
-
-        {step === 6 && (
           <div className="field"><label>Estimated budget / cost (if known)</label>
             <input value={f.estimated_budget} onChange={set('estimated_budget')} placeholder="e.g. £180k" autoFocus />
+            <div className="faint" style={{ marginTop: 8 }}>
+              Operations will build the detailed budget breakdown once the project is approved.
+            </div>
           </div>
         )}
 
-        {step === 7 && (
+        {step === 6 && (
           <div className="field"><label>Known risks or blockers</label>
             <div className="choice-grid">
               {RISKS.map((r) => (
@@ -262,14 +282,29 @@ export default function IntakeWizard({ onSave, onClose }) {
           </div>
         )}
 
+        {step === 7 && (
+          <div className="field">
+            <label>User Requirement Specification (URS) — required *</label>
+            <div className="faint" style={{ margin: '4px 0 12px' }}>
+              Attach the URS document for this project. Supplier quotes will be assessed against it.
+              {hasUrs && !ursFile && ' A URS is already attached to this project — upload a file only if you want to replace it.'}
+            </div>
+            <input type="file" accept=".pdf,.doc,.docx,.txt,.md" onChange={(e) => setUrsFile(e.target.files[0] || null)} />
+            {ursFile && <div className="muted" style={{ marginTop: 8 }}>Selected: {ursFile.name}</div>}
+          </div>
+        )}
+
         <div className="actions" style={{ justifyContent: 'space-between' }}>
-          <button type="button" className="btn" onClick={onClose}>Cancel</button>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button type="button" className="btn" onClick={onClose}>Cancel</button>
+            <button type="button" className="btn" disabled={busy} onClick={saveDraft}>Save & finish later</button>
+          </div>
           <div style={{ display: 'flex', gap: 10 }}>
             {step > 0 && <button type="button" className="btn" onClick={() => { setErr(''); setStep(step - 1); }}>Back</button>}
             {step < STEPS.length - 1 ? (
               <button type="button" className="btn primary" onClick={next}>Next</button>
             ) : (
-              <button type="button" className="btn primary" disabled={busy} onClick={submit}>{busy ? 'Creating…' : 'Submit & create project'}</button>
+              <button type="button" className="btn primary" disabled={busy} onClick={submit}>{busy ? 'Submitting…' : 'Submit for approval'}</button>
             )}
           </div>
         </div>
