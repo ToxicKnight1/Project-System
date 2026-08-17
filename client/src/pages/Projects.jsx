@@ -34,7 +34,9 @@ export default function Projects() {
   const canCreate = user.role !== 'viewer';
 
   const load = () => api('/projects').then(setProjects).catch((e) => setErr(e.message));
-  useEffect(load, []);
+  // Wrapped so the effect returns undefined — returning load's Promise would make
+  // React call it as a cleanup function on unmount and crash the page.
+  useEffect(() => { load(); }, []);
 
   // After submitting (or drafting), return to the Projects list so the user can
   // see the project sitting in Active, open it freely, or raise another.
