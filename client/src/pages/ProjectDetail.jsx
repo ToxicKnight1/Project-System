@@ -27,18 +27,14 @@ function downloadDoc(doc) {
     .catch(() => alert('Download failed'));
 }
 
-function Subtasks({ project, canEdit, reload }) {
+function Tasks({ project, isOps, reload }) {
   const [title, setTitle] = useState('');
-  const [subFor, setSubFor] = useState(null); // task id we're adding a subtask under
-  const [subTitle, setSubTitle] = useState('');
 
-  const parents = project.tasks.filter((t) => !t.parent_id);
-  const childrenOf = (id) => project.tasks.filter((t) => t.parent_id === id);
-
-  const add = async (parent_id, text, clear) => {
-    if (!text.trim()) return;
-    await api(`/projects/${project.id}/tasks`, { method: 'POST', body: { title: text.trim(), parent_id } });
-    clear();
+  const add = async (e) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+    await api(`/projects/${project.id}/tasks`, { method: 'POST', body: { title: title.trim() } });
+    setTitle('');
     reload();
   };
   const toggle = async (t) => {
@@ -50,39 +46,29 @@ function Subtasks({ project, canEdit, reload }) {
     reload();
   };
 
-  const Row = ({ t, sub }) => (
-    <div className={`task-row${sub ? ' sub' : ''}`}>
-      <label className="task-check">
-        <input type="checkbox" checked={t.status === 'done'} disabled={!canEdit} onChange={() => toggle(t)} />
-        <span className={t.status === 'done' ? 'task-done' : ''}>{t.title}</span>
-      </label>
-      {canEdit && (
-        <div className="task-actions">
-          {!sub && <button className="btn small" onClick={() => { setSubFor(subFor === t.id ? null : t.id); setSubTitle(''); }}>+ Subtask</button>}
-          <button className="btn small danger" onClick={() => remove(t)}>✕</button>
-        </div>
-      )}
-    </div>
-  );
-
   return (
     <div className="detail-card card">
-      <h3>Tasks & subtasks</h3>
-      {parents.length === 0 && <div className="faint" style={{ padding: '6px 0 12px' }}>No tasks yet.</div>}
-      {parents.map((t) => (
-        <div key={t.id}>
-          <Row t={t} />
-          {childrenOf(t.id).map((c) => <Row key={c.id} t={c} sub />)}
-          {subFor === t.id && canEdit && (
-            <form className="task-add sub" onSubmit={(e) => { e.preventDefault(); add(t.id, subTitle, () => { setSubTitle(''); setSubFor(null); }); }}>
-              <input value={subTitle} onChange={(e) => setSubTitle(e.target.value)} placeholder="Subtask…" autoFocus />
-              <button className="btn small primary">Add</button>
-            </form>
+      <h3>Tasks</h3>
+      {project.tasks.length === 0 && (
+        <div className="faint" style={{ padding: '6px 0 12px' }}>
+          No tasks yet.{!isOps && ' Operations manage the task list.'}
+        </div>
+      )}
+      {project.tasks.map((t) => (
+        <div key={t.id} className="task-row">
+          <label className="task-check">
+            <input type="checkbox" checked={t.status === 'done'} disabled={!isOps} onChange={() => toggle(t)} />
+            <span className={t.status === 'done' ? 'task-done' : ''}>{t.title}</span>
+          </label>
+          {isOps && (
+            <div className="task-actions">
+              <button className="btn small danger" onClick={() => remove(t)}>✕</button>
+            </div>
           )}
         </div>
       ))}
-      {canEdit && (
-        <form className="task-add" onSubmit={(e) => { e.preventDefault(); add(null, title, () => setTitle('')); }}>
+      {isOps && (
+        <form className="task-add" onSubmit={add}>
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Add a task…" />
           <button className="btn small primary">Add</button>
         </form>
@@ -298,7 +284,7 @@ export default function ProjectDetail() {
               </table>
             </div>
             <div>
-              <Subtasks project={project} canEdit={canEdit} reload={load} />
+              <Tasks project={project} isOps={isOps} reload={load} />
               <BudgetBreakdown project={project} isOps={isOps} reload={load} />
               <Comments project={project} isOps={isOps} reload={load} />
             </div>

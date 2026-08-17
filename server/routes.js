@@ -212,10 +212,21 @@ router.get('/projects/:id', (req, res) => {
 
 // Create (or draft) a project form. Admins and operations can raise forms;
 // priority and due date are operations-controlled and ignored here.
+function replaceBudgetComponents(projectId, components) {
+  if (!Array.isArray(components)) return;
+  db.prepare('DELETE FROM budget_items WHERE project_id = ?').run(projectId);
+  const insert = db.prepare('INSERT INTO budget_items (project_id, label, amount) VALUES (?, ?, ?)');
+  for (const c of components) {
+    const label = String(c.label || '').trim();
+    const amount = Number(c.amount);
+    if (label && Number.isFinite(amount) && amount >= 0) insert.run(projectId, label, amount);
+  }
+}
+
 router.post('/projects', requireRole('manager'), (req, res) => {
   const {
     name, description = '', department = '', expense_type = '', intake = null,
-    draft = false, budget = null,
+    draft = false, budget = null, budget_components,
   } = req.body || {};
   if (!name) return res.status(400).json({ error: 'Project name required' });
   const info = db
@@ -223,6 +234,7 @@ router.post('/projects', requireRole('manager'), (req, res) => {
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'planning')`)
     .run(name, description, department, expense_type, intake ? JSON.stringify(intake) : '', req.user.id,
       draft ? 'draft' : 'awaiting_approval', budget);
+  replaceBudgetComponents(info.lastInsertRowid, budget_components);
   res.status(201).json(db.prepare('SELECT * FROM projects WHERE id = ?').get(info.lastInsertRowid));
 });
 
@@ -238,6 +250,7 @@ router.put('/projects/:id', (req, res) => {
   if (draft !== null && p.approval_status === 'draft' && !draft) approval = 'awaiting_approval';
   db.prepare('UPDATE projects SET name=?, description=?, department=?, expense_type=?, budget=?, intake=?, approval_status=? WHERE id=?')
     .run(name, description, department, expense_type, budget, intake, approval, p.id);
+  if (req.body && req.body.budget_components !== undefined) replaceBudgetComponents(p.id, req.body.budget_components);
   res.json(db.prepare('SELECT * FROM projects WHERE id = ?').get(p.id));
 });
 
@@ -278,40 +291,30 @@ router.delete('/projects/:id', (req, res) => {
   res.json({ ok: true });
 });
 
-// ── Subtasks (simple checklist; owner admin + operations) ─────────
-router.post('/projects/:id/tasks', (req, res) => {
-  const p = getVisibleProject(req, res);
-  if (!p) return;
-  if (!canEditProject(req.user, p)) return res.status(403).json({ error: 'You cannot edit this project' });
-  const { title, parent_id = null } = req.body || {};
+// ── Tasks (operations only; requesters see them read-only) ────────
+router.post('/projects/:id/tasks', requireOps, (req, res) => {
+  const p = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id);
+  if (!p) return res.status(404).json({ error: 'Project not found' });
+  const { title } = req.body || {};
   if (!title || !String(title).trim()) return res.status(400).json({ error: 'Title required' });
   const info = db
-    .prepare("INSERT INTO tasks (project_id, title, status, parent_id) VALUES (?, ?, 'todo', ?)")
-    .run(p.id, String(title).trim(), parent_id);
+    .prepare("INSERT INTO tasks (project_id, title, status) VALUES (?, ?, 'todo')")
+    .run(p.id, String(title).trim());
   res.status(201).json(db.prepare('SELECT * FROM tasks WHERE id = ?').get(info.lastInsertRowid));
 });
 
-router.put('/tasks/:id', (req, res) => {
+router.put('/tasks/:id', requireOps, (req, res) => {
   const t = db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
   if (!t) return res.status(404).json({ error: 'Task not found' });
-  const p = db.prepare('SELECT * FROM projects WHERE id = ?').get(t.project_id);
-  if (!p || !projectVisible(req.user, p) || !canEditProject(req.user, p)) {
-    return res.status(403).json({ error: 'You cannot edit this project' });
-  }
   const { title = t.title, done } = req.body || {};
   const status = done === undefined ? t.status : done ? 'done' : 'todo';
   db.prepare('UPDATE tasks SET title=?, status=? WHERE id=?').run(title, status, t.id);
   res.json(db.prepare('SELECT * FROM tasks WHERE id = ?').get(t.id));
 });
 
-router.delete('/tasks/:id', (req, res) => {
-  const t = db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
-  if (!t) return res.status(404).json({ error: 'Task not found' });
-  const p = db.prepare('SELECT * FROM projects WHERE id = ?').get(t.project_id);
-  if (!p || !projectVisible(req.user, p) || !canEditProject(req.user, p)) {
-    return res.status(403).json({ error: 'You cannot edit this project' });
-  }
-  db.prepare('DELETE FROM tasks WHERE id = ? OR parent_id = ?').run(t.id, t.id);
+router.delete('/tasks/:id', requireOps, (req, res) => {
+  const info = db.prepare('DELETE FROM tasks WHERE id = ?').run(req.params.id);
+  if (!info.changes) return res.status(404).json({ error: 'Task not found' });
   res.json({ ok: true });
 });
 

@@ -21,17 +21,6 @@ const RISKS = [
 
 const STEPS = ['Basic Information', 'Project Overview', 'Business Value', 'Scope', 'Stakeholders', 'Budget', 'Risks & Constraints', 'URS Attachment'];
 
-// Parse "180k", "£25,000", "1.2m" etc. into a number for the budget column.
-function parseBudget(text) {
-  if (!text) return null;
-  const m = String(text).toLowerCase().replace(/[£$,\s]/g, '').match(/^(\d+(?:\.\d+)?)(k|m)?/);
-  if (!m) return null;
-  let n = parseFloat(m[1]);
-  if (m[2] === 'k') n *= 1000;
-  if (m[2] === 'm') n *= 1000000;
-  return Number.isFinite(n) ? n : null;
-}
-
 const val = (intake, key) => (intake && intake[key]) || '';
 
 export default function IntakeWizard({ existing, onDone, onClose }) {
@@ -60,9 +49,17 @@ export default function IntakeWizard({ existing, onDone, onClose }) {
     exec_sponsor: val(intake, 'Executive sponsor'),
     stakeholders: val(intake, 'Key stakeholders / teams involved') || [],
     beneficiaries: val(intake, 'Who will use or benefit'),
-    estimated_budget: val(intake, 'Estimated budget / cost'),
     risks: val(intake, 'Known risks or blockers') || [],
   });
+  const [components, setComponents] = useState(
+    existing?.budget_items?.length
+      ? existing.budget_items.map((i) => ({ label: i.label, amount: String(i.amount) }))
+      : [{ label: '', amount: '' }]
+  );
+  const validComponents = components.filter((c) => c.label.trim() && Number.isFinite(Number(c.amount)) && Number(c.amount) > 0);
+  const budgetTotal = validComponents.reduce((s, c) => s + Number(c.amount), 0);
+  const setComponent = (i, key, value) =>
+    setComponents(components.map((c, idx) => (idx === i ? { ...c, [key]: value } : c)));
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const toggle = (k, v) => setF({ ...f, [k]: f[k].includes(v) ? f[k].filter((x) => x !== v) : [...f[k], v] });
   const hasUrs = !!existing?.urs_document_id;
@@ -91,7 +88,8 @@ export default function IntakeWizard({ existing, onDone, onClose }) {
     description: f.goal,
     department: f.department,
     expense_type: f.expense_type.join(', '),
-    budget: parseBudget(f.estimated_budget),
+    budget: budgetTotal > 0 ? budgetTotal : null,
+    budget_components: validComponents.map((c) => ({ label: c.label.trim(), amount: Number(c.amount) })),
     draft,
     intake: {
       'Project Sponsor (requested by)': f.sponsor,
@@ -110,7 +108,6 @@ export default function IntakeWizard({ existing, onDone, onClose }) {
       'Executive sponsor': f.exec_sponsor,
       'Key stakeholders / teams involved': f.stakeholders,
       'Who will use or benefit': f.beneficiaries,
-      'Estimated budget / cost': f.estimated_budget,
       'Known risks or blockers': f.risks,
     },
   });
@@ -261,10 +258,30 @@ export default function IntakeWizard({ existing, onDone, onClose }) {
         )}
 
         {step === 5 && (
-          <div className="field"><label>Estimated budget / cost (if known)</label>
-            <input value={f.estimated_budget} onChange={set('estimated_budget')} placeholder="e.g. £180k" autoFocus />
-            <div className="faint" style={{ marginTop: 8 }}>
-              Operations will build the detailed budget breakdown once the project is approved.
+          <div className="field">
+            <label>Budget breakdown — list the components that make up the cost</label>
+            <div className="faint" style={{ margin: '4px 0 12px' }}>
+              Add each component with its estimated price. The total is calculated automatically.
+            </div>
+            {components.map((c, i) => (
+              <div key={i} className="task-add" style={{ marginTop: i === 0 ? 0 : 8 }}>
+                <input value={c.label} onChange={(e) => setComponent(i, 'label', e.target.value)}
+                  placeholder={`Component ${i + 1}, e.g. Machinery supply`} autoFocus={i === 0} />
+                <input type="number" min="0" step="0.01" value={c.amount}
+                  onChange={(e) => setComponent(i, 'amount', e.target.value)} placeholder="£" style={{ maxWidth: 160, flex: 'none' }} />
+                {components.length > 1 && (
+                  <button type="button" className="btn small danger"
+                    onClick={() => setComponents(components.filter((_, idx) => idx !== i))}>✕</button>
+                )}
+              </div>
+            ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 }}>
+              <button type="button" className="btn small" onClick={() => setComponents([...components, { label: '', amount: '' }])}>
+                + Add component
+              </button>
+              <div style={{ fontWeight: 800 }}>
+                Total: {budgetTotal > 0 ? `£${budgetTotal.toLocaleString('en-GB')}` : '—'}
+              </div>
             </div>
           </div>
         )}

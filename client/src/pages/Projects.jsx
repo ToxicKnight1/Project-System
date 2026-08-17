@@ -36,10 +36,16 @@ export default function Projects() {
   const load = () => api('/projects').then(setProjects).catch((e) => setErr(e.message));
   useEffect(load, []);
 
-  const done = (project, wasDraft) => {
+  // After submitting (or drafting), return to the Projects list so the user can
+  // see the project sitting in Active, open it freely, or raise another.
+  const done = () => {
     setWizard(null);
-    if (wasDraft) load();
-    else navigate(`/projects/${project.id}`);
+    load();
+  };
+
+  const resume = async (p) => {
+    const full = await api(`/projects/${p.id}`).catch(() => p);
+    setWizard(full);
   };
 
   if (err) return <div className="form-err">{err}</div>;
@@ -68,7 +74,7 @@ export default function Projects() {
             <div className="empty">No active projects.</div>
           ) : (
             active.map((p) => (
-              <ProjectRow key={p.id} p={p} onOpen={(x) => navigate(`/projects/${x.id}`)} onResume={(x) => setWizard(x)} />
+              <ProjectRow key={p.id} p={p} onOpen={(x) => navigate(`/projects/${x.id}`)} onResume={resume} />
             ))
           )}
         </div>
