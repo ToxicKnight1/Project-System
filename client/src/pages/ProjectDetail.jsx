@@ -244,7 +244,20 @@ export default function ProjectDetail() {
             <button className="btn approve" onClick={approve}>✓ Approve</button>
           )}
           {canContribute && project.approval_status === 'approved' && (
-            <button className="btn" onClick={markCompleted}>Mark completed</button>
+            <button
+              className="btn"
+              disabled={!ursDoc}
+              title={ursDoc ? undefined : 'Attach the URS document before marking completed'}
+              onClick={markCompleted}
+            >
+              Mark completed
+            </button>
+          )}
+          {isOps && project.approval_status === 'approved' && (
+            <button className="btn" onClick={() => opsUpdate({ approval_status: 'awaiting_approval' })}>↩ Awaiting approval</button>
+          )}
+          {isOps && project.approval_status === 'completed' && (
+            <button className="btn" onClick={() => opsUpdate({ approval_status: 'approved' })}>↩ Move to Approved</button>
           )}
           <button className="btn" disabled={!prevId} title="Previous project" onClick={() => navigate(`/projects/${prevId}`)}>←</button>
           <button className="btn" disabled={!nextId} title="Next project" onClick={() => navigate(`/projects/${nextId}`)}>→</button>

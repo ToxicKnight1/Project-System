@@ -331,7 +331,7 @@ router.post('/quotes-sessions/:sid/import/:projectId', requireAuth, requireOps, 
     .run(p.id, `${p.name} · ${p.reference}`, sess.id);
 
   try {
-    const trigger = `I have just imported the form for ${p.reference} · ${p.name}${ursDoc ? ' together with its URS document' : ' (no URS attached to it)'}. Confirm in a few lines what you now have on record for it, and note anything still missing before its quotes can be fully assessed.`;
+    const trigger = `I have just imported the form for ${p.reference} · ${p.name}${ursDoc ? ' together with its complete URS document (attached above in full)' : ' (no URS attached to it)'}. ${ursDoc ? 'Read the entire URS end to end and summarise ALL of its sections and requirements — not just the headline — so the full requirement set is on record. ' : ''}Then note anything still missing before its quotes can be fully assessed.`;
     const reply = await callModel(sess.id, loadHistory(sess.id), trigger);
     const insert = db.prepare('INSERT INTO quote_chat (session_id, role, content, user_id) VALUES (?, ?, ?, ?)');
     insert.run(sess.id, 'user', `Imported ${p.reference} · ${p.name}${ursDoc ? ' with URS' : ''}.`, req.user.id);

@@ -321,6 +321,9 @@ router.put('/projects/:id/ops', requireOps, (req, res) => {
     if (!['awaiting_approval', 'approved', 'completed'].includes(body.approval_status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }
+    if (body.approval_status === 'completed' && !p.urs_document_id) {
+      return res.status(400).json({ error: 'A URS document must be attached before the project can be marked completed' });
+    }
     approval_status = body.approval_status;
   }
   db.prepare('UPDATE projects SET priority_tier=?, due_date=?, start_date=?, approval_status=? WHERE id=?')
@@ -338,6 +341,7 @@ router.post('/projects/:id/complete', (req, res) => {
   if (!p) return;
   if (!canContribute(req.user, p)) return res.status(403).json({ error: 'Not allowed' });
   if (p.approval_status !== 'approved') return res.status(400).json({ error: 'Only approved projects can be marked completed' });
+  if (!p.urs_document_id) return res.status(400).json({ error: 'A URS document must be attached before the project can be marked completed' });
   db.prepare("UPDATE projects SET approval_status = 'completed' WHERE id = ?").run(p.id);
   if (p.owner_id && p.owner_id !== req.user.id) {
     notify(p.owner_id, `Your project "${p.name}" has been marked as completed.`, p.id);
