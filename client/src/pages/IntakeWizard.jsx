@@ -27,7 +27,6 @@ export default function IntakeWizard({ existing, onDone, onClose }) {
   const { user } = useAuth();
   const today = new Date().toISOString().slice(0, 10);
   const intake = existing?.intake ? (() => { try { return JSON.parse(existing.intake); } catch { return null; } })() : null;
-  const [step, setStep] = useState(0);
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const [ursFile, setUrsFile] = useState(null);
@@ -75,6 +74,21 @@ export default function IntakeWizard({ existing, onDone, onClose }) {
     [],
   ];
 
+  // Resuming a draft reopens at the step it was saved on (stored as _step),
+  // or failing that at the first step that still requires filling in.
+  const [step, setStep] = useState(() => {
+    if (existing?.approval_status !== 'draft') return 0;
+    const saved = Number(intake?._step);
+    if (Number.isInteger(saved) && saved >= 0 && saved < STEPS.length) return saved;
+    for (let s = 0; s < REQUIRED_BY_STEP.length; s++) {
+      for (const [key] of REQUIRED_BY_STEP[s]) {
+        const v = f[key];
+        if (!v || (Array.isArray(v) && v.length === 0)) return s;
+      }
+    }
+    return STEPS.length - 1; // everything required is filled — go to the URS step
+  });
+
   const validate = () => {
     for (const [key, label] of REQUIRED_BY_STEP[step]) {
       const v = f[key];
@@ -109,6 +123,8 @@ export default function IntakeWizard({ existing, onDone, onClose }) {
       'Key stakeholders / teams involved': f.stakeholders,
       'Who will use or benefit': f.beneficiaries,
       'Known risks or blockers': f.risks,
+      // Drafts remember which step they were saved on so Resume reopens there.
+      ...(draft ? { _step: step } : {}),
     },
   });
 
