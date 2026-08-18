@@ -127,7 +127,7 @@ function BudgetBreakdown({ project, canContribute, reload }) {
   );
 }
 
-function Comments({ project, isOps, reload }) {
+function Comments({ project, canContribute, reload }) {
   const [text, setText] = useState('');
   const add = async (e) => {
     e.preventDefault();
@@ -138,7 +138,7 @@ function Comments({ project, isOps, reload }) {
   };
   return (
     <div className="detail-card card">
-      <h3>Operations comments</h3>
+      <h3>Comments</h3>
       {project.comments.length === 0 && <div className="faint" style={{ padding: '6px 0 12px' }}>No comments yet.</div>}
       {project.comments.map((c) => (
         <div key={c.id} className="comment">
@@ -146,9 +146,9 @@ function Comments({ project, isOps, reload }) {
           {c.content}
         </div>
       ))}
-      {isOps && (
+      {canContribute && (
         <form className="task-add" onSubmit={add}>
-          <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Add a comment visible to the requester…" />
+          <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Add a comment or reply…" />
           <button className="btn small primary">Post</button>
         </form>
       )}
@@ -226,7 +226,7 @@ export default function ProjectDetail() {
       <div className="page-head">
         <div>
           <div className="faint" style={{ fontSize: '0.76rem', marginBottom: 4 }}>
-            <a onClick={() => navigate(home)} style={{ cursor: 'pointer' }}>Home</a> / {project.reference} · {project.name}
+            <a onClick={() => navigate(home)} style={{ cursor: 'pointer' }}>← Back</a> / {project.reference} · {project.name}
           </div>
           <h1>{project.name}</h1>
           <div className="page-sub">
@@ -243,11 +243,9 @@ export default function ProjectDetail() {
           {canContribute && project.approval_status === 'approved' && (
             <button className="btn" onClick={markCompleted}>Mark completed</button>
           )}
-          <button className="btn" onClick={() => navigate(home)}>← Back</button>
           <button className="btn" disabled={!prevId} title="Previous project" onClick={() => navigate(`/projects/${prevId}`)}>←</button>
           <button className="btn" disabled={!nextId} title="Next project" onClick={() => navigate(`/projects/${nextId}`)}>→</button>
           {canEdit && <button className="btn" onClick={() => setEditForm(true)}>Edit form</button>}
-          {isOps && <button className="btn" onClick={() => navigate(`/projects/${id}/quotes`)}>✦ Compare Quotes</button>}
         </div>
       </div>
 
@@ -313,7 +311,7 @@ export default function ProjectDetail() {
         <div>
           <Tasks project={project} canContribute={canContribute} reload={load} />
           <BudgetBreakdown project={project} canContribute={canContribute} reload={load} />
-          <Comments project={project} isOps={isOps} reload={load} />
+          <Comments project={project} canContribute={canContribute} reload={load} />
         </div>
       </div>
 

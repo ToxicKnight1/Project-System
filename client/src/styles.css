@@ -82,16 +82,18 @@ a { color: var(--accent); text-decoration: none; }
 /* Three status tiles left-aligned; the budget tile narrower and pushed right. */
 .dash-tiles { display: grid; grid-template-columns: 1fr 1fr 1fr 0.85fr; gap: 18px; }
 .dash-tiles .stat-tile.budget { margin-left: 24px; }
-.dash-columns { display: grid; grid-template-columns: 1.3fr 1.1fr 0.9fr; gap: 20px; align-items: start; }
+.dash-columns { display: grid; grid-template-columns: 1fr 1fr 1fr 0.85fr; gap: 18px; align-items: start; }
+.dash-columns > * { min-width: 0; }
+.dash-columns .stat-tile.budget-slot { visibility: hidden; }
 .ops-row.column { flex-direction: column; align-items: stretch; gap: 8px; }
 .ops-row.column .ops-controls { justify-content: flex-end; flex-wrap: wrap; }
 .help-q {
   display: inline-flex; align-items: center; justify-content: center;
   width: 18px; height: 18px; border-radius: 50%; cursor: help;
-  background: var(--navy); color: #fff; font-size: 0.7rem; font-weight: 800;
+  background: #b91c1c; color: #fff; font-size: 0.7rem; font-weight: 800;
   vertical-align: 2px;
 }
-.report-corner { position: fixed; right: 20px; bottom: 74px; z-index: 40; }
+.report-corner { position: fixed; right: 20px; bottom: 20px; z-index: 40; }
 .btn.approve { background: #15803d; border-color: #15803d; }
 .btn.approve:hover { background: #16a34a; }
 
@@ -120,7 +122,7 @@ a { color: var(--accent); text-decoration: none; }
 }
 
 /* ── Project detail: form + side cards ── */
-.detail-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; align-items: start; }
+.detail-grid { display: grid; grid-template-columns: 1.9fr 1fr; gap: 20px; align-items: start; }
 .detail-card { margin-bottom: 20px; }
 .detail-card h3 { font-size: 0.9rem; font-weight: 800; color: var(--text-strong); margin-bottom: 12px; }
 .form-tbl td:first-child { color: var(--text-muted); width: 40%; font-size: 0.78rem; }
@@ -140,17 +142,18 @@ a { color: var(--accent); text-decoration: none; }
 .comment { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; white-space: pre-wrap; }
 .comment:last-of-type { border-bottom: none; }
 .comment-head { font-size: 0.74rem; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; }
-.ops-panel { border-left: 3px solid var(--accent); }
+.ops-panel { border-left: 3px solid var(--accent); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.ops-panel .ops-controls { margin-top: 0 !important; margin-left: auto; justify-content: flex-end; }
 
 /* ── Notification bell ── */
-.bell-wrap { position: relative; margin-left: auto; }
+.bell-wrap { position: relative; }
 .bell { position: relative; font-size: 0.95rem; }
 .bell-badge {
   position: absolute; top: -6px; right: -6px; background: var(--bad); color: #fff;
   font-size: 0.62rem; font-weight: 800; border-radius: 99px; padding: 2px 6px;
 }
 .bell-panel {
-  position: absolute; right: 0; top: calc(100% + 8px); width: 340px; max-height: 420px;
+  position: absolute; left: 0; top: calc(100% + 8px); width: 340px; max-height: 420px;
   overflow-y: auto; z-index: 60; box-shadow: 0 18px 44px rgba(0,0,0,.5);
 }
 .bell-item { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
@@ -414,3 +417,8 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
   .kanban { grid-template-columns: 1fr; }
   .main { padding: 20px 16px 50px; }
 }
+
+/* Sign out lives in the top bar, on the far right */
+.topbar-user { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.topbar-user .whoami { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }
+.topbar-user .whoami b { color: var(--text-strong); }

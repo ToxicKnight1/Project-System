@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Routes, Route, NavLink, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, NavLink, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { api, getToken, clearToken } from './api.js';
 import Login from './pages/Login.jsx';
 import Dashboard from './pages/Dashboard.jsx';
@@ -60,6 +60,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (!getToken()) {
@@ -82,6 +83,9 @@ export default function App() {
 
   const isOps = user?.role === 'manager';
   const home = isOps ? '/dashboard' : '/projects';
+  // On a project page, Compare Quotes appears in the top navigation (ops only).
+  const projMatch = location.pathname.match(/^\/projects\/(\d+)/);
+  const quotesTarget = isOps && projMatch ? `/projects/${projMatch[1]}/quotes` : null;
 
   return (
     <AuthCtx.Provider value={{ user, setUser, logout }}>
@@ -98,16 +102,14 @@ export default function App() {
             <div className="topbar-links">
               <NavLink to={home} end className="nav-link">⌂ Home</NavLink>
               {isOps && <NavLink to="/projects" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Projects</NavLink>}
+              {quotesTarget && <NavLink to={quotesTarget} className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>✦ Compare Quotes</NavLink>}
+              <NotificationBell />
             </div>
-            <NotificationBell />
+            <div className="topbar-user">
+              <span className="whoami"><b>{user.name}</b> · {ROLE_LABELS[user.role] || user.role}</span>
+              <button className="btn small" onClick={logout}>Sign out</button>
+            </div>
           </nav>
-          <div className="user-corner">
-            <div className="whoami">
-              <b>{user.name}</b>
-              {ROLE_LABELS[user.role] || user.role}
-            </div>
-            <button className="btn small" onClick={logout}>Sign out</button>
-          </div>
           <main className="main">
             <Routes>
               <Route path="/" element={<Navigate to={home} replace />} />

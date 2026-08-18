@@ -24,7 +24,7 @@ export default function QuotesPage() {
       <div className="page-head">
         <div>
           <div className="faint" style={{ fontSize: '0.76rem', marginBottom: 4 }}>
-            <a onClick={() => navigate(`/projects/${id}`)} style={{ cursor: 'pointer' }}>{project.reference} · {project.name}</a> / Compare Quotes
+            <a onClick={() => navigate(`/projects/${id}`)} style={{ cursor: 'pointer' }}>← Back</a> / {project.reference} · {project.name} / Compare Quotes
           </div>
           <h1>✦ Compare Quotes</h1>
           <div className="page-sub">{project.reference} · {project.name}</div>

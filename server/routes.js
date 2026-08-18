@@ -140,6 +140,12 @@ function notify(userId, content, projectId) {
   db.prepare('INSERT INTO notifications (user_id, content, project_id) VALUES (?, ?, ?)').run(userId, content, projectId || null);
 }
 
+// Notify every active Operations user (except the actor themselves).
+function notifyOps(content, projectId, exceptUserId) {
+  const ops = db.prepare("SELECT id FROM users WHERE role = 'manager' AND active = 1").all();
+  for (const u of ops) if (u.id !== exceptUserId) notify(u.id, content, projectId);
+}
+
 const budgetTotal = (projectId) =>
   db.prepare('SELECT COALESCE(SUM(amount),0) AS t FROM budget_items WHERE project_id = ?').get(projectId).t;
 
@@ -269,7 +275,11 @@ router.post('/projects', requireRole('manager'), (req, res) => {
       draft ? 'draft' : 'awaiting_approval', budget);
   db.prepare("UPDATE projects SET reference = 'CP-' || printf('%04d', id) WHERE id = ?").run(info.lastInsertRowid);
   replaceBudgetComponents(info.lastInsertRowid, budget_components);
-  res.status(201).json(db.prepare('SELECT * FROM projects WHERE id = ?').get(info.lastInsertRowid));
+  const created = db.prepare('SELECT * FROM projects WHERE id = ?').get(info.lastInsertRowid);
+  if (!draft && req.user.role !== 'manager') {
+    notifyOps(`${req.user.name} submitted a new project form: "${created.name}" (${created.reference}).`, created.id, req.user.id);
+  }
+  res.status(201).json(created);
 });
 
 // Update the form content (owner while not completed, or operations).
@@ -285,6 +295,14 @@ router.put('/projects/:id', (req, res) => {
   db.prepare('UPDATE projects SET name=?, description=?, department=?, expense_type=?, budget=?, intake=?, approval_status=? WHERE id=?')
     .run(name, description, department, expense_type, budget, intake, approval, p.id);
   if (req.body && req.body.budget_components !== undefined) replaceBudgetComponents(p.id, req.body.budget_components);
+  // Keep Operations in the loop when a requester submits or changes a form.
+  if (req.user.role !== 'manager') {
+    if (p.approval_status === 'draft' && approval === 'awaiting_approval') {
+      notifyOps(`${req.user.name} submitted a new project form: "${name}" (${p.reference}).`, p.id, req.user.id);
+    } else if (approval !== 'draft') {
+      notifyOps(`${req.user.name} updated their form "${name}" (${p.reference}).`, p.id, req.user.id);
+    }
+  }
   res.json(db.prepare('SELECT * FROM projects WHERE id = ?').get(p.id));
 });
 
@@ -399,15 +417,20 @@ router.delete('/budget-items/:id', (req, res) => {
   });
 });
 
-// ── Comments (operations write; project owner and team read) ──────
-router.post('/projects/:id/comments', requireOps, (req, res) => {
+// ── Comments (Operations and the form's author; each notifies the other) ──
+router.post('/projects/:id/comments', (req, res) => {
   const p = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id);
   if (!p) return res.status(404).json({ error: 'Project not found' });
+  if (!canContribute(req.user, p)) return res.status(403).json({ error: 'Not allowed' });
   const content = String((req.body || {}).content || '').trim();
   if (!content) return res.status(400).json({ error: 'Comment required' });
   db.prepare('INSERT INTO comments (project_id, user_id, content) VALUES (?, ?, ?)').run(p.id, req.user.id, content);
-  if (p.owner_id && p.owner_id !== req.user.id) {
-    notify(p.owner_id, `Operations commented on "${p.name}": ${content.slice(0, 120)}`, p.id);
+  if (req.user.role === 'manager') {
+    if (p.owner_id && p.owner_id !== req.user.id) {
+      notify(p.owner_id, `Operations commented on "${p.name}": ${content.slice(0, 120)}`, p.id);
+    }
+  } else {
+    notifyOps(`${req.user.name} replied on "${p.name}" (${p.reference}): ${content.slice(0, 120)}`, p.id, req.user.id);
   }
   res.status(201).json(
     db.prepare('SELECT c.*, u.name AS user_name FROM comments c LEFT JOIN users u ON u.id = c.user_id WHERE c.project_id = ? ORDER BY c.id DESC').all(p.id)

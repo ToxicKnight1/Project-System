@@ -3,28 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { api, getToken } from '../api.js';
 import { fmtMoney, fmtDate } from '../App.jsx';
 
-const TIERS = [
-  ['critical', 'Critical'],
-  ['urgent', 'Urgent'],
-  ['important', 'Important'],
-  ['routine', 'Routine'],
-  ['desirable', 'Desirable'],
-];
-
-function OpsRow({ p, onChanged, action }) {
+// Read-only row: approving and status changes happen inside the form itself.
+function OpsRow({ p }) {
   const navigate = useNavigate();
-  const [busy, setBusy] = useState(false);
-
-  const update = async (body) => {
-    setBusy(true);
-    try {
-      await api(`/projects/${p.id}/ops`, { method: 'PUT', body });
-      await onChanged();
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
     <div className="ops-row column">
       <div className="ops-name" onClick={() => navigate(`/projects/${p.id}`)}>
@@ -32,24 +13,9 @@ function OpsRow({ p, onChanged, action }) {
         <div className="faint" style={{ fontSize: '0.74rem' }}>
           {[p.reference, p.owner_name && `Raised by ${p.owner_name}${p.owner_department ? ` · ${p.owner_department}` : ''}`, `Submitted ${fmtDate(p.created_at)}`].filter(Boolean).join(' · ')}
         </div>
-      </div>
-      <div className="ops-controls">
-        {action !== 'none' && (
-          <>
-            <select value={p.priority_tier || ''} disabled={busy} onChange={(e) => update({ priority_tier: e.target.value })}>
-              <option value="">Priority…</option>
-              {TIERS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-            <input type="date" value={p.due_date || ''} disabled={busy} onChange={(e) => update({ due_date: e.target.value || null })} title="Due date" />
-          </>
-        )}
-        <span className="muted num" style={{ minWidth: 70, textAlign: 'right' }}>{fmtMoney(p.budget_total || p.budget)}</span>
-        {action === 'approve' && (
-          <button className="btn small primary" disabled={busy} onClick={() => update({ approval_status: 'approved' })}>Approve</button>
-        )}
-        {action === 'complete' && (
-          <button className="btn small" disabled={busy} onClick={() => update({ approval_status: 'completed' })}>Mark completed</button>
-        )}
+        <div className="muted" style={{ fontSize: '0.78rem', marginTop: 4 }}>
+          {[fmtMoney(p.budget_total || p.budget), p.due_date && `Due ${fmtDate(p.due_date)}`].filter(Boolean).join(' · ')}
+        </div>
       </div>
     </div>
   );
@@ -110,12 +76,12 @@ export default function Dashboard() {
         <div className="card">
           <h2 style={{ fontSize: '0.95rem', marginBottom: 12 }}>
             Awaiting approval{' '}
-            <span className="help-q" title="Projects submitted by requesters that need an Operations decision. Open one to review the form, or approve it directly from this list.">?</span>
+            <span className="help-q" title="Projects submitted by requesters that need an Operations decision. Open one to review the form and approve it there.">?</span>
           </h2>
           {data.awaiting.length === 0 ? (
             <div className="empty">Nothing waiting — all caught up.</div>
           ) : (
-            data.awaiting.map((p) => <OpsRow key={p.id} p={p} onChanged={load} action="approve" />)
+            data.awaiting.map((p) => <OpsRow key={p.id} p={p} />)
           )}
         </div>
 
@@ -124,7 +90,7 @@ export default function Dashboard() {
           {data.approved.length === 0 ? (
             <div className="empty">No approved projects in flight.</div>
           ) : (
-            data.approved.map((p) => <OpsRow key={p.id} p={p} onChanged={load} action="complete" />)
+            data.approved.map((p) => <OpsRow key={p.id} p={p} />)
           )}
         </div>
 
@@ -133,9 +99,10 @@ export default function Dashboard() {
           {(data.completed || []).length === 0 ? (
             <div className="empty">Nothing completed yet.</div>
           ) : (
-            data.completed.map((p) => <OpsRow key={p.id} p={p} onChanged={load} action="none" />)
+            data.completed.map((p) => <OpsRow key={p.id} p={p} />)
           )}
         </div>
+        <div />
       </div>
 
       <div className="report-corner">
