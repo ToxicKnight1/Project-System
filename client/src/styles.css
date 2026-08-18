@@ -239,7 +239,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .brand-row { display: flex; align-items: center; justify-content: flex-end; gap: 22px; flex-wrap: nowrap; margin-bottom: 0; margin-right: 8vw; }
 .brand-pill {
   background: #fff; border-radius: 30px; padding: 20px 48px;
-  font-size: clamp(2.2rem, 3.2vw, 3.8rem); color: #221a66; font-weight: 400; letter-spacing: -0.02em;
+  font-size: clamp(2rem, 2.88vw, 3.42rem); color: #221a66; font-weight: 400; letter-spacing: -0.02em;
   box-shadow: 0 10px 36px rgba(0, 0, 0, 0.3); white-space: nowrap;
 }
 .brand-pill b { font-weight: 800; }
@@ -263,7 +263,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .auth-card {
   width: 100%; max-width: 520px; min-height: 680px; background: #2b1e83; border-radius: 28px;
   padding: 38px 42px 42px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
-  flex-shrink: 0; display: flex; flex-direction: column; margin-left: 2vw;
+  flex-shrink: 0; display: flex; flex-direction: column; margin-left: 12vw;
 }
 .auth-card .auth-submit { margin-top: auto; }
 @media (max-width: 900px) {
