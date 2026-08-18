@@ -72,16 +72,16 @@ export default function Projects() {
 
       <div className="proj-columns">
         <div className="proj-col card">
-          <h2 className="proj-col-title">Active</h2>
+          <h2 className="proj-col-title">Awaiting approval</h2>
           {active.length === 0 ? (
-            <div className="empty">No active projects.</div>
+            <div className="empty">Nothing awaiting approval.</div>
           ) : (
             active.map((p) => <ProjectRow key={p.id} p={p} onOpen={openRow} onResume={resume} />)
           )}
         </div>
 
         <div className="proj-col card">
-          <h2 className="proj-col-title">Approved</h2>
+          <h2 className="proj-col-title">Approved & running</h2>
           {approved.length === 0 ? (
             <div className="empty">Nothing approved yet.</div>
           ) : (

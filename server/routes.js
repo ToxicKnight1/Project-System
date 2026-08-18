@@ -484,6 +484,7 @@ router.get('/reports/monthly', requireOps, (req, res) => {
   const money = (n) => `£${Number(n || 0).toLocaleString('en-GB')}`;
   const grandTotal = rows.reduce((s, p) => s + (p.budget_total || p.budget || 0), 0);
   const stamp = new Date().toISOString().slice(0, 10);
+  const monthName = new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="monthly-report-${stamp}.pdf"`);
@@ -491,7 +492,7 @@ router.get('/reports/monthly', requireOps, (req, res) => {
   doc.pipe(res);
 
   const navy = '#221a66';
-  doc.fillColor(navy).fontSize(20).font('Helvetica-Bold').text('Central Pharma — Monthly Project Report');
+  doc.fillColor(navy).fontSize(20).font('Helvetica-Bold').text(`Central Pharma — Monthly Project Report — ${monthName}`);
   doc.fillColor('#51637f').fontSize(10).font('Helvetica').text(`Generated ${stamp} · ${rows.length} project${rows.length === 1 ? '' : 's'}`);
   doc.moveDown(1.2);
 
@@ -503,8 +504,9 @@ router.get('/reports/monthly', requireOps, (req, res) => {
   const drawRow = (cells, opts = {}) => {
     const y = doc.y;
     let x = startX;
-    doc.font(opts.bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(9).fillColor(opts.color || '#1f2a44');
     cells.forEach((cell, i) => {
+      doc.font(opts.bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(9)
+        .fillColor((opts.colors && opts.colors[i]) || opts.color || '#1f2a44');
       doc.text(String(cell == null ? '' : cell), x, y, { width: cols[i][1] - 6, lineBreak: false, ellipsis: true });
       x += cols[i][1];
     });
@@ -525,12 +527,13 @@ router.get('/reports/monthly', requireOps, (req, res) => {
       drawRow(cols.map((c) => c[0]), { bold: true, color: navy });
       rule();
     }
+    const statusColor = { approved: '#15803d', completed: '#0b4f26', awaiting_approval: '#c2620a' }[p.approval_status];
     drawRow([
       p.reference, p.name,
       p.owner_name ? `${p.owner_name}${p.owner_department ? ` (${p.owner_department})` : ''}` : '',
       p.department, p.expense_type, statusLabel[p.approval_status] || p.approval_status,
       p.priority_tier, p.due_date || '—', money(p.budget_total || p.budget),
-    ]);
+    ], { colors: { 5: statusColor } });
     rule();
   }
 

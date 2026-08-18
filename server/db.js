@@ -191,6 +191,18 @@ if (!taskCols.some((c) => c.name === 'parent_id')) {
   db.exec('ALTER TABLE tasks ADD COLUMN parent_id INTEGER REFERENCES tasks(id) ON DELETE CASCADE');
 }
 
+// One-off account consolidation (2026-08-18): the Operations account takes the
+// company email; the old admin account holding it is removed, its projects
+// reassigned so nothing is orphaned.
+const oldAdmin = db.prepare("SELECT * FROM users WHERE email = 'benjaminsmit@centralpharma.com' AND role = 'admin'").get();
+const opsAcct = db.prepare("SELECT * FROM users WHERE email = 'benjamin.smit.ch@gmail.com'").get();
+if (oldAdmin && opsAcct) {
+  db.prepare('UPDATE projects SET owner_id = ? WHERE owner_id = ?').run(opsAcct.id, oldAdmin.id);
+  db.prepare('DELETE FROM users WHERE id = ?').run(oldAdmin.id);
+  db.prepare("UPDATE users SET email = 'benjaminsmit@centralpharma.com' WHERE id = ?").run(opsAcct.id);
+  console.log('Consolidated: benjaminsmit@centralpharma.com now belongs to the Operations account');
+}
+
 // Seed a first admin so the portal is usable immediately after deploy.
 const userCount = db.prepare('SELECT COUNT(*) AS n FROM users').get().n;
 if (userCount === 0) {

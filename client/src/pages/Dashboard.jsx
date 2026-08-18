@@ -43,63 +43,47 @@ export default function Dashboard() {
   if (err) return <div className="form-err">{err}</div>;
   if (!data) return <div className="muted">Loading…</div>;
 
+  const monthName = new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+
+  const Column = ({ label, count, items, empty, help }) => (
+    <div className="card dash-col">
+      <div className="label">
+        {label}{help && <> <span className="help-q" title={help}>?</span></>}
+      </div>
+      <div className="value">{count}</div>
+      <div className="red-rule" />
+      {items.length === 0 ? (
+        <div className="empty">{empty}</div>
+      ) : (
+        items.map((p) => <OpsRow key={p.id} p={p} />)
+      )}
+    </div>
+  );
+
   return (
     <>
       <div className="dash-bg" />
       <div className="page-head">
-        <div>
+        <div style={{ flex: 1 }}>
           <h1>Operations Dashboard</h1>
         </div>
-      </div>
-
-      <div className="dash-tiles" style={{ marginBottom: 24 }}>
-        <div className="stat-tile">
-          <div className="label">
-            Awaiting approval{' '}
-            <span className="help-q" title="Projects submitted by requesters that need an Operations decision. Open one to review the form and approve it there.">?</span>
-          </div>
-          <div className="value">{data.awaiting.length}</div>
-        </div>
-        <div className="stat-tile">
-          <div className="label">Approved & running</div>
-          <div className="value">{data.approved.length}</div>
-        </div>
-        <div className="stat-tile">
-          <div className="label">Completed</div>
-          <div className="value">{data.completed_count}</div>
-        </div>
-        <div className="stat-tile budget">
-          <div className="label">Approved budget total</div>
-          <div className="value">{fmtMoney(data.approved.reduce((s, p) => s + (p.budget_total || p.budget || 0), 0))}</div>
-        </div>
+        <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--navy)' }}>{monthName}</div>
+        <div style={{ flex: 1 }} />
       </div>
 
       <div className="dash-columns">
-        <div className="card">
-          <h2 style={{ fontSize: '0.95rem', marginBottom: 12 }}>Awaiting approval</h2>
-          {data.awaiting.length === 0 ? (
-            <div className="empty">Nothing waiting — all caught up.</div>
-          ) : (
-            data.awaiting.map((p) => <OpsRow key={p.id} p={p} />)
-          )}
-        </div>
-
-        <div className="card">
-          <h2 style={{ fontSize: '0.95rem', marginBottom: 12 }}>Approved & running</h2>
-          {data.approved.length === 0 ? (
-            <div className="empty">No approved projects in flight.</div>
-          ) : (
-            data.approved.map((p) => <OpsRow key={p.id} p={p} />)
-          )}
-        </div>
-
-        <div className="card">
-          <h2 style={{ fontSize: '0.95rem', marginBottom: 12 }}>Completed</h2>
-          {(data.completed || []).length === 0 ? (
-            <div className="empty">Nothing completed yet.</div>
-          ) : (
-            data.completed.map((p) => <OpsRow key={p.id} p={p} />)
-          )}
+        <Column
+          label="Awaiting approval"
+          help="Projects submitted by requesters that need an Operations decision. Open one to review the form and approve it there."
+          count={data.awaiting.length}
+          items={data.awaiting}
+          empty="Nothing waiting — all caught up."
+        />
+        <Column label="Approved & running" count={data.approved.length} items={data.approved} empty="No approved projects in flight." />
+        <Column label="Completed" count={data.completed_count} items={data.completed || []} empty="Nothing completed yet." />
+        <div className="stat-tile budget">
+          <div className="label">Approved budget total</div>
+          <div className="value">{fmtMoney(data.approved.reduce((s, p) => s + (p.budget_total || p.budget || 0), 0))}</div>
         </div>
       </div>
 
