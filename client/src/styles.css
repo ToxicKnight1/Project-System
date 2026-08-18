@@ -263,7 +263,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .auth-card {
   width: 100%; max-width: 520px; min-height: 680px; background: #2b1e83; border-radius: 28px;
   padding: 38px 42px 42px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
-  flex-shrink: 0; display: flex; flex-direction: column; margin-left: 12vw;
+  flex-shrink: 0; display: flex; flex-direction: column; margin-left: 7vw;
 }
 .auth-card .auth-submit { margin-top: auto; }
 @media (max-width: 900px) {
