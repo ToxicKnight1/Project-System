@@ -45,7 +45,7 @@ a { color: var(--accent); text-decoration: none; }
 .topbar .brand span { color: var(--accent); }
 .topbar-logo {
   position: absolute; left: 50%; transform: translateX(-50%);
-  font-size: 1.25rem; color: var(--navy); letter-spacing: -0.02em; white-space: nowrap;
+  font-size: 1.65rem; color: var(--navy); letter-spacing: -0.02em; white-space: nowrap;
 }
 .topbar-logo b { font-weight: 800; }
 .topbar-links { display: flex; align-items: center; gap: 6px; }
