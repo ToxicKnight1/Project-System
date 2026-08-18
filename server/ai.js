@@ -136,16 +136,17 @@ function buildFormText(project) {
   return lines.join('\n');
 }
 
-function loadHistory() {
+function loadHistory(sessionId) {
   return db
-    .prepare('SELECT m.*, u.name AS user_name FROM quote_chat m LEFT JOIN users u ON u.id = m.user_id ORDER BY m.id')
-    .all();
+    .prepare('SELECT m.*, u.name AS user_name FROM quote_chat m LEFT JOIN users u ON u.id = m.user_id WHERE m.session_id = ? ORDER BY m.id')
+    .all(sessionId);
 }
 
-const docCount = () => db.prepare('SELECT COUNT(*) AS n FROM chat_documents').get().n;
+const docCount = (sessionId) =>
+  db.prepare('SELECT COUNT(*) AS n FROM chat_documents WHERE session_id = ?').get(sessionId).n;
 
-async function callModel(history, latestUserContent) {
-  const docs = db.prepare('SELECT * FROM chat_documents ORDER BY created_at, id').all();
+async function callModel(sessionId, history, latestUserContent) {
+  const docs = db.prepare('SELECT * FROM chat_documents WHERE session_id = ? ORDER BY created_at, id').all(sessionId);
   const { blocks, skipped } = await buildDocBlocks(docs);
 
   const contextLines = [
@@ -215,12 +216,41 @@ function requireConfigured(req, res, next) {
   next();
 }
 
-// Read the shared conversation.
-router.get('/quotes-chat', requireAuth, (req, res) => {
+// ── Chat sessions ─────────────────────────────────────────────────
+function getSession(req, res) {
+  const sess = db.prepare('SELECT * FROM quote_sessions WHERE id = ?').get(req.params.sid);
+  if (!sess) {
+    res.status(404).json({ error: 'Chat not found' });
+    return null;
+  }
+  return sess;
+}
+
+// The chat history log: every session, open and closed.
+router.get('/quotes-sessions', requireAuth, requireOps, (req, res) => {
+  res.json(
+    db.prepare(`
+      SELECT s.*, u.name AS created_by_name,
+        (SELECT COUNT(*) FROM quote_chat m WHERE m.session_id = s.id) AS message_count,
+        (SELECT MAX(created_at) FROM quote_chat m WHERE m.session_id = s.id) AS last_message_at
+      FROM quote_sessions s LEFT JOIN users u ON u.id = s.created_by
+      ORDER BY s.status = 'closed', COALESCE(last_message_at, s.created_at) DESC
+    `).all()
+  );
+});
+
+router.post('/quotes-sessions', requireAuth, requireOps, (req, res) => {
+  const info = db.prepare('INSERT INTO quote_sessions (created_by) VALUES (?)').run(req.user.id);
+  res.status(201).json(db.prepare('SELECT * FROM quote_sessions WHERE id = ?').get(info.lastInsertRowid));
+});
+
+router.get('/quotes-sessions/:sid', requireAuth, (req, res) => {
+  const sess = getSession(req, res);
+  if (!sess) return;
   res.json({
-    messages: loadHistory(),
-    doc_count: docCount(),
-    documents: db.prepare('SELECT id, original_name, created_at FROM chat_documents ORDER BY id').all(),
+    session: sess,
+    messages: loadHistory(sess.id),
+    doc_count: docCount(sess.id),
   });
 });
 
@@ -237,76 +267,102 @@ router.get('/quotes-chat/forms', requireAuth, requireOps, (req, res) => {
   );
 });
 
-// Upload supplier quote documents into the chat.
-router.post('/quotes-chat/documents', requireAuth, requireOps, upload.array('files', 10), (req, res) => {
+function requireOpen(sess, res) {
+  if (sess.status !== 'open') {
+    res.status(400).json({ error: 'This chat is closed' });
+    return false;
+  }
+  return true;
+}
+
+// Upload supplier quote documents into a chat.
+router.post('/quotes-sessions/:sid/documents', requireAuth, requireOps, upload.array('files', 10), (req, res) => {
+  const sess = getSession(req, res);
+  if (!sess || !requireOpen(sess, res)) return;
   if (!req.files || !req.files.length) return res.status(400).json({ error: 'No files uploaded' });
-  const insert = db.prepare('INSERT INTO chat_documents (stored_name, original_name, mime_type, size, uploaded_by) VALUES (?, ?, ?, ?, ?)');
-  for (const f of req.files) insert.run(f.filename, f.originalname, f.mimetype, f.size, req.user.id);
-  res.status(201).json({ doc_count: docCount() });
+  const insert = db.prepare('INSERT INTO chat_documents (session_id, stored_name, original_name, mime_type, size, uploaded_by) VALUES (?, ?, ?, ?, ?, ?)');
+  for (const f of req.files) insert.run(sess.id, f.filename, f.originalname, f.mimetype, f.size, req.user.id);
+  res.status(201).json({ doc_count: docCount(sess.id) });
 });
 
 // Send a chat message.
-router.post('/quotes-chat', requireAuth, requireOps, requireConfigured, async (req, res) => {
+router.post('/quotes-sessions/:sid/message', requireAuth, requireOps, requireConfigured, async (req, res) => {
+  const sess = getSession(req, res);
+  if (!sess || !requireOpen(sess, res)) return;
   const text = String((req.body || {}).message || '').trim().slice(0, 12000);
   if (!text) return res.status(400).json({ error: 'Message required' });
   try {
-    const reply = await callModel(loadHistory(), text);
-    const insert = db.prepare("INSERT INTO quote_chat (role, content, user_id) VALUES (?, ?, ?)");
-    insert.run('user', text, req.user.id);
-    insert.run('assistant', reply, null);
-    res.json({ messages: loadHistory() });
+    const reply = await callModel(sess.id, loadHistory(sess.id), text);
+    const insert = db.prepare('INSERT INTO quote_chat (session_id, role, content, user_id) VALUES (?, ?, ?, ?)');
+    insert.run(sess.id, 'user', text, req.user.id);
+    insert.run(sess.id, 'assistant', reply, null);
+    res.json({ messages: loadHistory(sess.id) });
   } catch (e) {
     aiErrorResponse(res, e);
   }
 });
 
-// Import a chosen project's form (and its URS) into the chat: the form becomes
-// a text document, the URS is attached alongside it.
-router.post('/quotes-chat/import/:projectId', requireAuth, requireOps, requireConfigured, async (req, res) => {
+// Import a chosen project's form (and its URS). One form per chat: once a
+// form is in, the chat is locked to it and further imports are refused.
+router.post('/quotes-sessions/:sid/import/:projectId', requireAuth, requireOps, requireConfigured, async (req, res) => {
+  const sess = getSession(req, res);
+  if (!sess || !requireOpen(sess, res)) return;
+  if (sess.project_id) return res.status(400).json({ error: 'A form is already imported into this chat — start a new chat for another form' });
   const p = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.projectId);
   if (!p) return res.status(404).json({ error: 'Project not found' });
   if (!['approved', 'completed'].includes(p.approval_status)) {
     return res.status(400).json({ error: 'Only approved or completed projects can be imported' });
   }
-  const insertDoc = db.prepare('INSERT INTO chat_documents (stored_name, original_name, mime_type, size, uploaded_by) VALUES (?, ?, ?, ?, ?)');
+  const insertDoc = db.prepare('INSERT INTO chat_documents (session_id, stored_name, original_name, mime_type, size, uploaded_by) VALUES (?, ?, ?, ?, ?, ?)');
 
-  // Form answers as a text document (replacing any earlier import of the same form).
-  const formName = `${p.reference}-form.txt`;
-  const old = db.prepare('SELECT * FROM chat_documents WHERE original_name = ?').all(formName);
-  for (const d of old) {
-    db.prepare('DELETE FROM chat_documents WHERE id = ?').run(d.id);
-    fs.rm(path.join(UPLOAD_DIR, d.stored_name), { force: true }, () => {});
-  }
   const formText = buildFormText(p);
   const stored = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}.txt`;
   fs.writeFileSync(path.join(UPLOAD_DIR, stored), formText);
-  insertDoc.run(stored, formName, 'text/plain', Buffer.byteLength(formText), req.user.id);
+  insertDoc.run(sess.id, stored, `${p.reference}-form.txt`, 'text/plain', Buffer.byteLength(formText), req.user.id);
 
   // The project's URS document rides along (shares the stored file).
   const ursDoc = p.urs_document_id ? db.prepare('SELECT * FROM documents WHERE id = ?').get(p.urs_document_id) : null;
   if (ursDoc) {
-    const already = db.prepare('SELECT 1 FROM chat_documents WHERE stored_name = ?').get(ursDoc.stored_name);
-    if (!already) insertDoc.run(ursDoc.stored_name, `${p.reference}-URS-${ursDoc.original_name}`, ursDoc.mime_type, ursDoc.size, req.user.id);
+    insertDoc.run(sess.id, ursDoc.stored_name, `${p.reference}-URS-${ursDoc.original_name}`, ursDoc.mime_type, ursDoc.size, req.user.id);
   }
+
+  // The chat takes the form's reference as its label and locks to it.
+  db.prepare('UPDATE quote_sessions SET project_id = ?, title = ? WHERE id = ?')
+    .run(p.id, `${p.reference} · ${p.name}`, sess.id);
 
   try {
     const trigger = `I have just imported the form for ${p.reference} · ${p.name}${ursDoc ? ' together with its URS document' : ' (no URS attached to it)'}. Confirm in a few lines what you now have on record for it, and note anything still missing before its quotes can be fully assessed.`;
-    const reply = await callModel(loadHistory(), trigger);
-    const insert = db.prepare("INSERT INTO quote_chat (role, content, user_id) VALUES (?, ?, ?)");
-    insert.run('user', `Imported ${p.reference} · ${p.name}${ursDoc ? ' with URS' : ''}.`, req.user.id);
-    insert.run('assistant', reply, null);
-    res.json({ messages: loadHistory(), doc_count: docCount() });
+    const reply = await callModel(sess.id, loadHistory(sess.id), trigger);
+    const insert = db.prepare('INSERT INTO quote_chat (session_id, role, content, user_id) VALUES (?, ?, ?, ?)');
+    insert.run(sess.id, 'user', `Imported ${p.reference} · ${p.name}${ursDoc ? ' with URS' : ''}.`, req.user.id);
+    insert.run(sess.id, 'assistant', reply, null);
+    res.json({
+      session: db.prepare('SELECT * FROM quote_sessions WHERE id = ?').get(sess.id),
+      messages: loadHistory(sess.id),
+      doc_count: docCount(sess.id),
+    });
   } catch (e) {
     aiErrorResponse(res, e);
   }
 });
 
-// Reset the chat back to zero: messages and chat documents both cleared.
+// Close a chat (kept in the history log, read-only).
+router.post('/quotes-sessions/:sid/close', requireAuth, requireOps, (req, res) => {
+  const sess = getSession(req, res);
+  if (!sess) return;
+  db.prepare("UPDATE quote_sessions SET status = 'closed' WHERE id = ?").run(sess.id);
+  res.json({ ok: true });
+});
+
+// Delete a chat entirely: messages and documents go with it.
 // Files owned by projects (imported URS copies) are kept on disk.
-router.delete('/quotes-chat', requireAuth, requireOps, (req, res) => {
-  const docs = db.prepare('SELECT * FROM chat_documents').all();
-  db.prepare('DELETE FROM chat_documents').run();
-  db.prepare('DELETE FROM quote_chat').run();
+router.delete('/quotes-sessions/:sid', requireAuth, requireOps, (req, res) => {
+  const sess = getSession(req, res);
+  if (!sess) return;
+  const docs = db.prepare('SELECT * FROM chat_documents WHERE session_id = ?').all(sess.id);
+  db.prepare('DELETE FROM chat_documents WHERE session_id = ?').run(sess.id);
+  db.prepare('DELETE FROM quote_chat WHERE session_id = ?').run(sess.id);
+  db.prepare('DELETE FROM quote_sessions WHERE id = ?').run(sess.id);
   for (const d of docs) {
     const ownedByProject = db.prepare('SELECT 1 FROM documents WHERE stored_name = ?').get(d.stored_name);
     if (!ownedByProject) fs.rm(path.join(UPLOAD_DIR, d.stored_name), { force: true }, () => {});

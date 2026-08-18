@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard.jsx';
 import Projects from './pages/Projects.jsx';
 import ProjectDetail from './pages/ProjectDetail.jsx';
 import QuotesPage from './pages/QuotesPage.jsx';
+import QuotesChatPage from './pages/QuotesChatPage.jsx';
 import Team from './pages/Team.jsx';
 
 const AuthCtx = createContext(null);
@@ -114,6 +115,7 @@ export default function App() {
               <Route path="/projects" element={<Projects />} />
               <Route path="/projects/:id" element={<ProjectDetail />} />
               <Route path="/quotes" element={isOps ? <QuotesPage /> : <Navigate to="/projects" replace />} />
+              <Route path="/quotes/:sid" element={isOps ? <QuotesChatPage /> : <Navigate to="/projects" replace />} />
               <Route path="/team" element={<Team />} />
               <Route path="*" element={<Navigate to={home} />} />
             </Routes>

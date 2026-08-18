@@ -4,9 +4,9 @@ import { useAuth } from '../App.jsx';
 
 // The standalone Compare Quotes chat. Documents and history are shared by
 // Operations; project forms are imported from the panel beside the chat.
-export default function CompareChat({ refreshSignal = 0, onChanged }) {
+export default function CompareChat({ sessionId, readOnly = false, refreshSignal = 0, onChanged }) {
   const { user } = useAuth();
-  const canChat = user.role === 'manager';
+  const canChat = user.role === 'manager' && !readOnly;
   const [messages, setMessages] = useState(null); // null = loading
   const [docCount, setDocCount] = useState(0);
   const [input, setInput] = useState('');
@@ -22,11 +22,11 @@ export default function CompareChat({ refreshSignal = 0, onChanged }) {
 
   useEffect(() => {
     let cancelled = false;
-    api('/quotes-chat')
+    api(`/quotes-sessions/${sessionId}`)
       .then((res) => { if (!cancelled) { setMessages(res.messages); setDocCount(res.doc_count); } })
       .catch((e) => { if (!cancelled) { setErr(e.message); setMessages([]); } });
     return () => { cancelled = true; };
-  }, [refreshSignal]);
+  }, [sessionId, refreshSignal]);
 
   const run = async (label, fn) => {
     if (busy) return;
@@ -49,7 +49,7 @@ export default function CompareChat({ refreshSignal = 0, onChanged }) {
     if (!q) return;
     setInput('');
     setMessages((m) => [...m, { id: `tmp-${Date.now()}`, role: 'user', content: q, user_name: user.name }]);
-    run('Analysing', () => api('/quotes-chat', { method: 'POST', body: { message: q } }));
+    run('Analysing', () => api(`/quotes-sessions/${sessionId}/message`, { method: 'POST', body: { message: q } }));
   };
 
   const attach = async (e) => {
@@ -62,9 +62,9 @@ export default function CompareChat({ refreshSignal = 0, onChanged }) {
     try {
       const fd = new FormData();
       for (const file of files) fd.append('files', file);
-      await api('/quotes-chat/documents', { method: 'POST', formData: fd });
+      await api(`/quotes-sessions/${sessionId}/documents`, { method: 'POST', formData: fd });
       const names = files.map((f) => `"${f.name}"`).join(', ');
-      const res = await api('/quotes-chat', {
+      const res = await api(`/quotes-sessions/${sessionId}/message`, {
         method: 'POST',
         body: { message: `I have just attached ${names}. Please confirm what you can read from ${files.length > 1 ? 'them' : 'it'} in a couple of lines.` },
       });
@@ -78,14 +78,6 @@ export default function CompareChat({ refreshSignal = 0, onChanged }) {
     }
   };
 
-  const reset = async () => {
-    if (!confirm('Reset the quote comparison to zero? The conversation and its attached documents are cleared for everyone.')) return;
-    await api('/quotes-chat', { method: 'DELETE' });
-    setMessages([]);
-    setDocCount(0);
-    onChanged?.();
-  };
-
   if (messages === null) return <div className="muted">Loading conversation…</div>;
 
   const nothingToAnalyse = docCount === 0;
@@ -97,11 +89,6 @@ export default function CompareChat({ refreshSignal = 0, onChanged }) {
           Quote assessment against three points: <b>URS fit</b>, <b>price</b>, <b>timeline</b>. Attach supplier quotes
           with the paperclip and import a project form for reference.
         </div>
-        {canChat && (
-          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-            <button className="btn small" onClick={reset} disabled={busy || (messages.length === 0 && docCount === 0)}>Reset</button>
-          </div>
-        )}
       </div>
 
       <div className="chat-scroll">
@@ -133,7 +120,7 @@ export default function CompareChat({ refreshSignal = 0, onChanged }) {
       {canChat && (
         <form className="chat-input" onSubmit={(e) => { e.preventDefault(); send(); }}>
           <input type="file" ref={fileRef} multiple style={{ display: 'none' }}
-            accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv,.md,.json" onChange={attach} />
+            accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv,.md,.json,.docx" onChange={attach} />
           <button type="button" className="btn attach" title="Attach supplier quotes"
             onClick={() => fileRef.current.click()} disabled={busy}>📎</button>
           <input

@@ -110,8 +110,17 @@ CREATE TABLE IF NOT EXISTS client_errors (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- Standalone Compare Quotes chat (not tied to one project): messages plus its
--- own attachment list. Imported forms/URS become chat documents.
+-- Compare Quotes chat sessions: each chat is its own session, labelled by the
+-- form imported into it, resumable until closed.
+CREATE TABLE IF NOT EXISTS quote_sessions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL DEFAULT 'New chat',
+  project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','closed')),
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS quote_chat (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   role TEXT NOT NULL CHECK (role IN ('user','assistant')),
@@ -162,6 +171,21 @@ for (const [col, ddl] of [
 }
 // Every form carries a reference number; backfill any created before the column existed.
 db.prepare("UPDATE projects SET reference = 'CP-' || printf('%04d', id) WHERE reference IS NULL OR reference = ''").run();
+// Chat rows created before sessions existed get folded into one legacy session.
+for (const table of ['quote_chat', 'chat_documents']) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all();
+  if (!cols.some((c) => c.name === 'session_id')) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN session_id INTEGER REFERENCES quote_sessions(id) ON DELETE CASCADE`);
+  }
+}
+const orphanChat = db.prepare('SELECT COUNT(*) AS n FROM quote_chat WHERE session_id IS NULL').get().n;
+const orphanDocs = db.prepare('SELECT COUNT(*) AS n FROM chat_documents WHERE session_id IS NULL').get().n;
+if (orphanChat > 0 || orphanDocs > 0) {
+  const info = db.prepare("INSERT INTO quote_sessions (title) VALUES ('Earlier chat')").run();
+  db.prepare('UPDATE quote_chat SET session_id = ? WHERE session_id IS NULL').run(info.lastInsertRowid);
+  db.prepare('UPDATE chat_documents SET session_id = ? WHERE session_id IS NULL').run(info.lastInsertRowid);
+}
+
 const taskCols = db.prepare('PRAGMA table_info(tasks)').all();
 if (!taskCols.some((c) => c.name === 'parent_id')) {
   db.exec('ALTER TABLE tasks ADD COLUMN parent_id INTEGER REFERENCES tasks(id) ON DELETE CASCADE');
