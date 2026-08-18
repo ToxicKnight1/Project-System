@@ -78,6 +78,7 @@ export default function Dashboard() {
       <div className="page-head">
         <div style={{ flex: 1 }}>
           <h1>Operations Dashboard</h1>
+          <div className="page-sub">{awaiting.length + approved.length + completed.length} total</div>
         </div>
         <MonthNav value={month} onChange={setMonth} />
         <div style={{ flex: 1 }} />
