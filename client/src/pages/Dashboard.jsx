@@ -88,9 +88,15 @@ export default function Dashboard() {
         />
         <Column label="Approved & running" count={approved.length} items={approved} empty="No approved projects in flight." />
         <Column label="Completed" count={completed.length} items={completed} empty="Nothing completed yet." />
-        <div className="stat-tile budget">
-          <div className="label">Approved budget total</div>
-          <div className="value">{fmtMoney(approved.reduce((s, p) => s + (p.budget_total || p.budget || 0), 0))}</div>
+        <div>
+          <div className="stat-tile budget" style={{ marginBottom: 18 }}>
+            <div className="label" style={{ color: '#b91c1c' }}>Completed project expenditure</div>
+            <div className="value">{fmtMoney(completed.reduce((s, p) => s + (p.budget_total || p.budget || 0), 0))}</div>
+          </div>
+          <div className="stat-tile budget">
+            <div className="label" style={{ color: 'var(--accent)' }}>Approved budget total</div>
+            <div className="value">{fmtMoney(approved.reduce((s, p) => s + (p.budget_total || p.budget || 0), 0))}</div>
+          </div>
         </div>
       </div>
 
