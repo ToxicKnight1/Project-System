@@ -4,12 +4,11 @@ import { api, getToken } from '../api.js';
 import { fmtMoney, fmtDate, MonthNav } from '../App.jsx';
 
 // Read-only row: approving and status changes happen inside the form itself.
-function OpsRow({ p, index }) {
+function OpsRow({ p }) {
   const navigate = useNavigate();
   return (
     <div className="ops-row column">
-      <div className="ops-name" style={{ display: 'flex', gap: 10 }} onClick={() => navigate(`/projects/${p.id}`)}>
-        <span className="row-num">{index + 1}.</span>
+      <div className="ops-name" onClick={() => navigate(`/projects/${p.id}`)}>
         <div style={{ minWidth: 0 }}>
           <b>{p.name}</b>
           <div className="faint" style={{ fontSize: '0.74rem' }}>
@@ -67,7 +66,7 @@ export default function Dashboard() {
       {items.length === 0 ? (
         <div className="empty">{empty}</div>
       ) : (
-        items.map((p, i) => <OpsRow key={p.id} p={p} index={i} />)
+        items.map((p) => <OpsRow key={p.id} p={p} />)
       )}
     </div>
   );

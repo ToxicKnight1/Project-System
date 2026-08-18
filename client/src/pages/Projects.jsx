@@ -4,11 +4,10 @@ import { api } from '../api.js';
 import { useAuth, ApprovalBadge, TierBadge, fmtMoney, fmtDate, MonthNav } from '../App.jsx';
 import IntakeWizard from './IntakeWizard.jsx';
 
-function ProjectRow({ p, onOpen, onResume, index }) {
+function ProjectRow({ p, onOpen, onResume }) {
   const isDraft = p.approval_status === 'draft';
   return (
     <div className="proj-row" onClick={() => (isDraft ? onResume(p) : onOpen(p))}>
-      <span className="row-num">{index + 1}.</span>
       <div className="proj-main">
         <b>{p.name}</b>
         <div className="faint" style={{ fontSize: '0.76rem' }}>
@@ -79,7 +78,7 @@ export default function Projects() {
           {active.length === 0 ? (
             <div className="empty">Nothing awaiting approval.</div>
           ) : (
-            active.map((p, i) => <ProjectRow key={p.id} p={p} index={i} onOpen={openRow} onResume={resume} />)
+            active.map((p) => <ProjectRow key={p.id} p={p} onOpen={openRow} onResume={resume} />)
           )}
         </div>
 
@@ -88,7 +87,7 @@ export default function Projects() {
           {approved.length === 0 ? (
             <div className="empty">Nothing approved yet.</div>
           ) : (
-            approved.map((p, i) => <ProjectRow key={p.id} p={p} index={i} onOpen={openRow} onResume={() => {}} />)
+            approved.map((p) => <ProjectRow key={p.id} p={p} onOpen={openRow} onResume={() => {}} />)
           )}
         </div>
 
@@ -97,7 +96,7 @@ export default function Projects() {
           {completed.length === 0 ? (
             <div className="empty">Nothing completed yet.</div>
           ) : (
-            completed.map((p, i) => <ProjectRow key={p.id} p={p} index={i} onOpen={openRow} onResume={() => {}} />)
+            completed.map((p) => <ProjectRow key={p.id} p={p} onOpen={openRow} onResume={() => {}} />)
           )}
         </div>
       </div>
