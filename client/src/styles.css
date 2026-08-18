@@ -82,7 +82,7 @@ a { color: var(--accent); text-decoration: none; }
 /* Three status tiles left-aligned; the budget tile narrower and pushed right. */
 .dash-tiles { display: grid; grid-template-columns: 1.15fr 1.15fr 1.15fr 0.9fr; gap: 18px; }
 .dash-tiles .stat-tile.budget { margin-left: 0; }
-.dash-columns { display: grid; grid-template-columns: 1.15fr 1.15fr 1.15fr 0.9fr; gap: 18px; align-items: start; }
+.dash-columns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; align-items: start; }
 .dash-columns > * { min-width: 0; }
 .dash-columns .stat-tile.budget-slot { visibility: hidden; }
 .ops-row.column { flex-direction: column; align-items: stretch; gap: 8px; }

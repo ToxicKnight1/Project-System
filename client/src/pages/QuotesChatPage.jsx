@@ -36,7 +36,6 @@ export default function QuotesChatPage() {
   };
 
   const closeChat = async () => {
-    if (!confirm('Close this chat? It stays in the history log as read-only.')) return;
     await api(`/quotes-sessions/${sid}/close`, { method: 'POST' });
     navigate('/quotes');
   };

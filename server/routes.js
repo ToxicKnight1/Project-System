@@ -341,6 +341,8 @@ router.post('/projects/:id/complete', (req, res) => {
   db.prepare("UPDATE projects SET approval_status = 'completed' WHERE id = ?").run(p.id);
   if (p.owner_id && p.owner_id !== req.user.id) {
     notify(p.owner_id, `Your project "${p.name}" has been marked as completed.`, p.id);
+  } else {
+    notifyOps(`${req.user.name} marked "${p.name}" (${p.reference}) as completed.`, p.id, req.user.id);
   }
   res.json(db.prepare('SELECT * FROM projects WHERE id = ?').get(p.id));
 });

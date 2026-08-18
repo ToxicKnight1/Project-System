@@ -163,7 +163,7 @@ export default function ProjectDetail() {
   const [project, setProject] = useState(null);
   const [err, setErr] = useState('');
   const [editForm, setEditForm] = useState(false);
-  const [formOpen, setFormOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(true);
   const [siblings, setSiblings] = useState([]);
   const isOps = user.role === 'manager';
   const isOwner = project && project.owner_id === user.id;
@@ -203,7 +203,6 @@ export default function ProjectDetail() {
   const approve = () => opsUpdate({ approval_status: 'approved' });
 
   const markCompleted = async () => {
-    if (!window.confirm(`Mark "${project.name}" as completed?`)) return;
     await api(`/projects/${id}/complete`, { method: 'POST' });
     load();
   };

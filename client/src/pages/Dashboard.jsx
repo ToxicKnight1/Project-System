@@ -101,7 +101,6 @@ export default function Dashboard() {
             data.completed.map((p) => <OpsRow key={p.id} p={p} />)
           )}
         </div>
-        <div />
       </div>
 
       <div className="report-corner">

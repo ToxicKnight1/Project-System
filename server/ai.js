@@ -328,7 +328,7 @@ router.post('/quotes-sessions/:sid/import/:projectId', requireAuth, requireOps, 
 
   // The chat takes the form's reference as its label and locks to it.
   db.prepare('UPDATE quote_sessions SET project_id = ?, title = ? WHERE id = ?')
-    .run(p.id, `${p.reference} · ${p.name}`, sess.id);
+    .run(p.id, `${p.name} · ${p.reference}`, sess.id);
 
   try {
     const trigger = `I have just imported the form for ${p.reference} · ${p.name}${ursDoc ? ' together with its URS document' : ' (no URS attached to it)'}. Confirm in a few lines what you now have on record for it, and note anything still missing before its quotes can be fully assessed.`;
