@@ -472,7 +472,8 @@ router.delete('/documents/:id', requireOps, (req, res) => {
 // ── Monthly report (operations only): PDF with grand budget total ─
 router.get('/reports/monthly', requireOps, (req, res) => {
   const PDFDocument = require('pdfkit');
-  const rows = db
+  const month = /^\d{4}-\d{2}$/.test(req.query.month || '') ? req.query.month : null;
+  let rows = db
     .prepare(`
       SELECT p.*, u.name AS owner_name, u.department AS owner_department,
         (SELECT COALESCE(SUM(amount),0) FROM budget_items b WHERE b.project_id = p.id) AS budget_total
@@ -481,10 +482,11 @@ router.get('/reports/monthly', requireOps, (req, res) => {
       ORDER BY p.created_at
     `)
     .all();
+  if (month) rows = rows.filter((p) => String(p.created_at || '').slice(0, 7) === month);
   const money = (n) => `£${Number(n || 0).toLocaleString('en-GB')}`;
   const grandTotal = rows.reduce((s, p) => s + (p.budget_total || p.budget || 0), 0);
   const stamp = new Date().toISOString().slice(0, 10);
-  const monthName = new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  const monthName = (month ? new Date(`${month}-01T00:00:00`) : new Date()).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="monthly-report-${stamp}.pdf"`);

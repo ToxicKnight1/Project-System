@@ -24,18 +24,26 @@ function OpsRow({ p }) {
 export default function Dashboard() {
   const [data, setData] = useState(null);
   const [err, setErr] = useState('');
+  const now = new Date();
+  const [month, setMonth] = useState({ y: now.getFullYear(), m: now.getMonth() });
 
   const load = () => api('/dashboard').then(setData).catch((e) => setErr(e.message));
   useEffect(() => { load(); }, []);
 
+  const monthKey = `${month.y}-${String(month.m + 1).padStart(2, '0')}`;
+  const shiftMonth = (d) => {
+    const date = new Date(month.y, month.m + d, 1);
+    setMonth({ y: date.getFullYear(), m: date.getMonth() });
+  };
+
   const downloadReport = async () => {
-    const res = await fetch('/api/reports/monthly', { headers: { Authorization: `Bearer ${getToken()}` } });
+    const res = await fetch(`/api/reports/monthly?month=${monthKey}`, { headers: { Authorization: `Bearer ${getToken()}` } });
     if (!res.ok) return alert('Could not generate the report');
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `monthly-report-${new Date().toISOString().slice(0, 10)}.pdf`;
+    a.download = `monthly-report-${monthKey}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -43,7 +51,11 @@ export default function Dashboard() {
   if (err) return <div className="form-err">{err}</div>;
   if (!data) return <div className="muted">Loading…</div>;
 
-  const monthName = new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  const inMonth = (p) => String(p.created_at || '').slice(0, 7) === monthKey;
+  const monthName = new Date(month.y, month.m, 1).toLocaleDateString('en-GB', { month: 'long' });
+  const awaiting = data.awaiting.filter(inMonth);
+  const approved = data.approved.filter(inMonth);
+  const completed = (data.completed || []).filter(inMonth);
 
   const Column = ({ label, count, items, empty, help }) => (
     <div className="card dash-col">
@@ -67,23 +79,27 @@ export default function Dashboard() {
         <div style={{ flex: 1 }}>
           <h1>Operations Dashboard</h1>
         </div>
-        <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--navy)' }}>{monthName}</div>
-        <div style={{ flex: 1 }} />
+        <div className="month-nav">
+          <button className="btn small" onClick={() => shiftMonth(-1)} title="Previous month">←</button>
+          <span className="month-pill">{monthName}</span>
+          <button className="btn small" onClick={() => shiftMonth(1)} title="Next month">→</button>
+        </div>
+        <div className="year-corner">{month.y}</div>
       </div>
 
       <div className="dash-columns">
         <Column
           label="Awaiting approval"
           help="Projects submitted by requesters that need an Operations decision. Open one to review the form and approve it there."
-          count={data.awaiting.length}
-          items={data.awaiting}
+          count={awaiting.length}
+          items={awaiting}
           empty="Nothing waiting — all caught up."
         />
-        <Column label="Approved & running" count={data.approved.length} items={data.approved} empty="No approved projects in flight." />
-        <Column label="Completed" count={data.completed_count} items={data.completed || []} empty="Nothing completed yet." />
+        <Column label="Approved & running" count={approved.length} items={approved} empty="No approved projects in flight." />
+        <Column label="Completed" count={completed.length} items={completed} empty="Nothing completed yet." />
         <div className="stat-tile budget">
           <div className="label">Approved budget total</div>
-          <div className="value">{fmtMoney(data.approved.reduce((s, p) => s + (p.budget_total || p.budget || 0), 0))}</div>
+          <div className="value">{fmtMoney(approved.reduce((s, p) => s + (p.budget_total || p.budget || 0), 0))}</div>
         </div>
       </div>
 

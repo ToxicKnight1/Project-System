@@ -85,7 +85,7 @@ a { color: var(--accent); text-decoration: none; }
 .dash-columns { display: grid; grid-template-columns: 1.15fr 1.15fr 1.15fr 0.9fr; gap: 18px; align-items: start; }
 .dash-col .label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted); margin-bottom: 8px; }
 .dash-col .value { font-size: 1.7rem; font-weight: 800; color: var(--text-strong); }
-.dash-col .red-rule { border-top: 2px solid #b91c1c; margin: 12px 0 6px; }
+.dash-col .red-rule { border-top: 2.6px solid #b91c1c; margin: 12px 0 6px; }
 .dash-columns > * { min-width: 0; }
 .dash-columns .stat-tile.budget-slot { visibility: hidden; }
 .ops-row.column { flex-direction: column; align-items: stretch; gap: 8px; }
@@ -102,7 +102,7 @@ a { color: var(--accent); text-decoration: none; }
 
 /* ── Projects: Active / Completed columns ── */
 .proj-columns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; align-items: start; }
-.proj-col-title { font-size: 1rem; font-weight: 800; color: var(--text-strong); margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.proj-col-title { font-size: 1rem; font-weight: 800; color: var(--text-strong); margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2.6px solid #b91c1c; }
 .proj-col.completed .proj-col-title { color: var(--text-muted); }
 .proj-row {
   display: flex; justify-content: space-between; align-items: center; gap: 12px;
@@ -435,3 +435,12 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 }
 .import-row:last-child { border-bottom: none; }
 @media (max-width: 900px) { .quotes-grid { grid-template-columns: 1fr; } }
+
+/* Month pill and navigation on the Operations Dashboard */
+.month-nav { display: flex; align-items: center; gap: 10px; }
+.month-pill {
+  background: var(--navy); color: #fff; border-radius: 10px;
+  padding: 8px 22px; font-size: 1.3rem; font-weight: 800; white-space: nowrap;
+}
+.month-nav .btn.small { padding: 8px 12px; }
+.year-corner { font-size: 1.15rem; font-weight: 800; color: var(--navy); text-align: right; flex: 1; }
