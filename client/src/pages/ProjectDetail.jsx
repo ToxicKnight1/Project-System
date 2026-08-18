@@ -168,12 +168,24 @@ export default function ProjectDetail() {
   const [tab, setTab] = useState('form');
   const [err, setErr] = useState('');
   const [editForm, setEditForm] = useState(false);
+  const [siblings, setSiblings] = useState([]);
   const isOps = user.role === 'manager';
   const isOwner = project && project.owner_id === user.id;
   const canEdit = isOps || (user.role === 'admin' && isOwner && project?.approval_status !== 'completed');
 
   const load = () => api(`/projects/${id}`).then(setProject).catch((e) => setErr(e.message));
   useEffect(() => { load(); }, [id]);
+
+  // Sibling project ids (drafts excluded — they open in the wizard, not here)
+  // so the ← / → buttons can step from project form to project form.
+  useEffect(() => {
+    api('/projects')
+      .then((list) => setSiblings(list.filter((p) => p.approval_status !== 'draft').map((p) => p.id)))
+      .catch(() => {});
+  }, []);
+  const idx = siblings.indexOf(Number(id));
+  const prevId = idx > 0 ? siblings[idx - 1] : null;
+  const nextId = idx >= 0 && idx < siblings.length - 1 ? siblings[idx + 1] : null;
 
   if (err) return <div className="form-err">{err}</div>;
   if (!project) return <div className="muted">Loading…</div>;
@@ -211,7 +223,11 @@ export default function ProjectDetail() {
               .filter(Boolean).join(' · ')}
           </div>
         </div>
-        {canEdit && <button className="btn" onClick={() => setEditForm(true)}>Edit form</button>}
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <button className="btn" disabled={!prevId} title="Previous project" onClick={() => navigate(`/projects/${prevId}`)}>←</button>
+          <button className="btn" disabled={!nextId} title="Next project" onClick={() => navigate(`/projects/${nextId}`)}>→</button>
+          {canEdit && <button className="btn" onClick={() => setEditForm(true)}>Edit form</button>}
+        </div>
       </div>
 
       <div className="grid cols-4" style={{ marginBottom: 22 }}>

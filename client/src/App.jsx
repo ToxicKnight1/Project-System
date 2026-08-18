@@ -96,7 +96,7 @@ export default function App() {
             <div className="topbar-links">
               <NavLink to={home} end className="nav-link">⌂ Home</NavLink>
               {isOps && <NavLink to="/dashboard" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Dashboard</NavLink>}
-              <NavLink to="/projects" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Projects</NavLink>
+              {isOps && <NavLink to="/projects" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Projects</NavLink>}
             </div>
             <NotificationBell />
           </nav>
