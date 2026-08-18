@@ -83,11 +83,6 @@ export default function App() {
 
   const isOps = user?.role === 'manager';
   const home = isOps ? '/dashboard' : '/projects';
-  // Compare Quotes lives permanently in the top navigation (ops only): on a
-  // project page it opens that project's quotes; otherwise it goes to the
-  // Projects list to pick one.
-  const projMatch = location.pathname.match(/^\/projects\/(\d+)/);
-  const quotesTarget = isOps ? (projMatch ? `/projects/${projMatch[1]}/quotes` : '/projects') : null;
 
   return (
     <AuthCtx.Provider value={{ user, setUser, logout }}>
@@ -104,14 +99,10 @@ export default function App() {
             <div className="topbar-links">
               <NavLink to={home} end className="nav-link">⌂ Home</NavLink>
               {isOps && <NavLink to="/projects" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Projects</NavLink>}
-              {quotesTarget && (
-                <NavLink to={quotesTarget} className={`nav-link${location.pathname.endsWith('/quotes') ? ' active' : ''}`}>
-                  ✦ Compare Quotes
-                </NavLink>
-              )}
-              <NotificationBell />
+              {isOps && <NavLink to="/quotes" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>✦ Compare Quotes</NavLink>}
             </div>
             <div className="topbar-user">
+              <NotificationBell />
               <span className="whoami"><b>{user.name}</b> · {ROLE_LABELS[user.role] || user.role}</span>
               <button className="btn small" onClick={logout}>Sign out</button>
             </div>
@@ -122,7 +113,7 @@ export default function App() {
               <Route path="/dashboard" element={isOps ? <Dashboard /> : <Navigate to="/projects" replace />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/projects/:id" element={<ProjectDetail />} />
-              <Route path="/projects/:id/quotes" element={isOps ? <QuotesPage /> : <Navigate to="/projects" replace />} />
+              <Route path="/quotes" element={isOps ? <QuotesPage /> : <Navigate to="/projects" replace />} />
               <Route path="/team" element={<Team />} />
               <Route path="*" element={<Navigate to={home} />} />
             </Routes>

@@ -1,45 +1,71 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { ApprovalBadge } from '../App.jsx';
 import CompareChat from './CompareChat.jsx';
 
-// Compare Quotes lives on its own page: the chat interaction happens here,
-// separate from the project form.
+// Standalone Compare Quotes page: the chat covers the left of the page; the
+// right panel lists project forms (approved or completed only) to import by
+// their reference.
 export default function QuotesPage() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [project, setProject] = useState(null);
+  const [forms, setForms] = useState([]);
+  const [signal, setSignal] = useState(0);
+  const [busyId, setBusyId] = useState(null);
   const [err, setErr] = useState('');
 
-  const load = () => api(`/projects/${id}`).then(setProject).catch((e) => setErr(e.message));
-  useEffect(() => { load(); }, [id]);
+  const loadForms = () => api('/quotes-chat/forms').then(setForms).catch(() => {});
+  useEffect(() => { loadForms(); }, []);
 
-  if (err) return <div className="form-err">{err}</div>;
-  if (!project) return <div className="muted">Loading…</div>;
+  const importForm = async (p) => {
+    setErr('');
+    setBusyId(p.id);
+    try {
+      await api(`/quotes-chat/import/${p.id}`, { method: 'POST' });
+      setSignal((s) => s + 1);
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   return (
     <>
       <div className="dash-bg" />
       <div className="page-head">
         <div>
-          <div className="faint" style={{ fontSize: '0.76rem', marginBottom: 4 }}>
-            <a onClick={() => navigate(`/projects/${id}`)} style={{ cursor: 'pointer' }}>← Back</a> / {project.reference} · {project.name} / Compare Quotes
-          </div>
-          <h1>✦ Compare Quotes</h1>
-          <div className="page-sub">{project.reference} · {project.name}</div>
-        </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <ApprovalBadge value={project.approval_status} />
-          <button className="btn" onClick={() => navigate(`/projects/${id}`)}>← Back</button>
+          <h1 style={{ color: 'var(--navy)', fontSize: '1.6rem' }}>✦ Compare Quotes</h1>
         </div>
       </div>
-      <CompareChat
-        projectId={project.id}
-        docCount={project.documents.length}
-        hasUrs={!!project.urs_document_id}
-        onDocsChanged={load}
-      />
+      <div className="quotes-grid">
+        <CompareChat refreshSignal={signal} onChanged={loadForms} />
+        <div className="card">
+          <h3 style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: 4 }}>Import form</h3>
+          <div className="faint" style={{ fontSize: '0.76rem', marginBottom: 12 }}>
+            Approved and completed project forms, by reference.
+          </div>
+          {err && <div className="form-err" style={{ marginBottom: 10 }}>{err}</div>}
+          {forms.length === 0 ? (
+            <div className="empty">No approved or completed projects yet.</div>
+          ) : (
+            forms.map((p) => (
+              <div key={p.id} className="import-row">
+                <div style={{ minWidth: 0 }}>
+                  <b style={{ fontSize: '0.84rem' }}>{p.reference}</b>
+                  <div className="faint" style={{ fontSize: '0.74rem' }}>
+                    {p.name}{p.owner_name ? ` · ${p.owner_name}` : ''}{p.urs_document_id ? '' : ' · no URS'}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+                  <ApprovalBadge value={p.approval_status} />
+                  <button className="btn small primary" disabled={busyId !== null} onClick={() => importForm(p)}>
+                    {busyId === p.id ? 'Importing…' : 'Import'}
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
     </>
   );
 }

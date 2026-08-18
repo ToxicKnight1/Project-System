@@ -49,13 +49,15 @@ export default function Dashboard() {
       <div className="page-head">
         <div>
           <h1>Operations Dashboard</h1>
-          <div className="page-sub">Approve incoming projects, set priorities and due dates</div>
         </div>
       </div>
 
       <div className="dash-tiles" style={{ marginBottom: 24 }}>
         <div className="stat-tile">
-          <div className="label">Awaiting approval</div>
+          <div className="label">
+            Awaiting approval{' '}
+            <span className="help-q" title="Projects submitted by requesters that need an Operations decision. Open one to review the form and approve it there.">?</span>
+          </div>
           <div className="value">{data.awaiting.length}</div>
         </div>
         <div className="stat-tile">
@@ -74,10 +76,7 @@ export default function Dashboard() {
 
       <div className="dash-columns">
         <div className="card">
-          <h2 style={{ fontSize: '0.95rem', marginBottom: 12 }}>
-            Awaiting approval{' '}
-            <span className="help-q" title="Projects submitted by requesters that need an Operations decision. Open one to review the form and approve it there.">?</span>
-          </h2>
+          <h2 style={{ fontSize: '0.95rem', marginBottom: 12 }}>Awaiting approval</h2>
           {data.awaiting.length === 0 ? (
             <div className="empty">Nothing waiting — all caught up.</div>
           ) : (

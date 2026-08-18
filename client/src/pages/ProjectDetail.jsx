@@ -163,6 +163,7 @@ export default function ProjectDetail() {
   const [project, setProject] = useState(null);
   const [err, setErr] = useState('');
   const [editForm, setEditForm] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
   const [siblings, setSiblings] = useState([]);
   const isOps = user.role === 'manager';
   const isOwner = project && project.owner_id === user.id;
@@ -225,9 +226,6 @@ export default function ProjectDetail() {
       <div className="dash-bg" />
       <div className="page-head">
         <div>
-          <div className="faint" style={{ fontSize: '0.76rem', marginBottom: 4 }}>
-            <a onClick={() => navigate(home)} style={{ cursor: 'pointer' }}>← Back</a> / {project.reference} · {project.name}
-          </div>
           <h1 style={{ color: 'var(--navy)', fontSize: '1.9rem' }}>{project.name}</h1>
           <div className="page-sub">
             {[project.reference, project.department !== project.owner_department && project.department, author].filter(Boolean).join(' · ')}
@@ -249,6 +247,7 @@ export default function ProjectDetail() {
           {canContribute && project.approval_status === 'approved' && (
             <button className="btn" onClick={markCompleted}>Mark completed</button>
           )}
+          <button className="btn" onClick={() => navigate(home)}>← Back</button>
           <button className="btn" disabled={!prevId} title="Previous project" onClick={() => navigate(`/projects/${prevId}`)}>←</button>
           <button className="btn" disabled={!nextId} title="Next project" onClick={() => navigate(`/projects/${nextId}`)}>→</button>
           {canEdit && <button className="btn" onClick={() => setEditForm(true)}>Edit form</button>}
@@ -277,7 +276,18 @@ export default function ProjectDetail() {
 
       <div className="detail-grid">
         <div className="detail-card card">
-          <h3>Project form</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ marginBottom: formOpen ? 12 : 0 }}>Project form</h3>
+            <button className="btn small" onClick={() => setFormOpen((v) => !v)}>
+              {formOpen ? 'Hide form' : 'Open form'}
+            </button>
+          </div>
+          {!formOpen && (
+            <div className="faint" style={{ fontSize: '0.8rem', marginTop: 8 }}>
+              {project.reference} · {project.name} — select Open form to view the full details.
+            </div>
+          )}
+          {formOpen && (
           <table className="tbl form-tbl">
             <tbody>
               <tr><td>Reference</td><td>{project.reference}</td></tr>
@@ -306,6 +316,7 @@ export default function ProjectDetail() {
               </tr>
             </tbody>
           </table>
+          )}
         </div>
         <div>
           <Tasks project={project} canContribute={canContribute} reload={load} />

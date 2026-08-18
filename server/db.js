@@ -110,6 +110,26 @@ CREATE TABLE IF NOT EXISTS client_errors (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Standalone Compare Quotes chat (not tied to one project): messages plus its
+-- own attachment list. Imported forms/URS become chat documents.
+CREATE TABLE IF NOT EXISTS quote_chat (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  role TEXT NOT NULL CHECK (role IN ('user','assistant')),
+  content TEXT NOT NULL,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS chat_documents (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  stored_name TEXT NOT NULL,
+  original_name TEXT NOT NULL,
+  mime_type TEXT DEFAULT '',
+  size INTEGER NOT NULL DEFAULT 0,
+  uploaded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS ai_messages (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,

@@ -80,7 +80,7 @@ a { color: var(--accent); text-decoration: none; }
 
 /* ── Operations dashboard layout ── */
 /* Three status tiles left-aligned; the budget tile narrower and pushed right. */
-.dash-tiles { display: grid; grid-template-columns: 1.2fr 1.2fr 1.2fr 0.55fr; gap: 18px; }
+.dash-tiles { display: grid; grid-template-columns: 1.15fr 1.15fr 1.15fr 0.9fr; gap: 18px; }
 .dash-tiles .stat-tile.budget { margin-left: 34px; }
 .dash-columns { display: grid; grid-template-columns: 1.2fr 1.2fr 1.2fr 0.55fr; gap: 18px; align-items: start; }
 .dash-columns > * { min-width: 0; }
@@ -98,7 +98,7 @@ a { color: var(--accent); text-decoration: none; }
 .btn.approve:hover { background: #16a34a; }
 
 /* ── Projects: Active / Completed columns ── */
-.proj-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
+.proj-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
 .proj-col-title { font-size: 1rem; font-weight: 800; color: var(--text-strong); margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
 .proj-col.completed .proj-col-title { color: var(--text-muted); }
 .proj-row {
@@ -153,7 +153,7 @@ a { color: var(--accent); text-decoration: none; }
   font-size: 0.62rem; font-weight: 800; border-radius: 99px; padding: 2px 6px;
 }
 .bell-panel {
-  position: absolute; left: 0; top: calc(100% + 8px); width: 340px; max-height: 420px;
+  position: absolute; right: 0; top: calc(100% + 8px); width: 340px; max-height: 420px;
   overflow-y: auto; z-index: 60; box-shadow: 0 18px 44px rgba(0,0,0,.5);
 }
 .bell-item { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
@@ -422,3 +422,13 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .topbar-user { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 .topbar-user .whoami { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }
 .topbar-user .whoami b { color: var(--text-strong); }
+
+/* Compare Quotes page: chat covers the left, form picker on the right */
+.quotes-grid { display: grid; grid-template-columns: 2.1fr 1fr; gap: 20px; align-items: start; }
+.quotes-grid > * { min-width: 0; }
+.import-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding: 10px 4px; border-bottom: 1px solid var(--border);
+}
+.import-row:last-child { border-bottom: none; }
+@media (max-width: 900px) { .quotes-grid { grid-template-columns: 1fr; } }

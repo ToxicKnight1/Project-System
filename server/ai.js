@@ -1,6 +1,8 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+const multer = require('multer');
 const Anthropic = require('@anthropic-ai/sdk');
 const { db, UPLOAD_DIR } = require('./db');
 const { requireAuth, requireOps } = require('./auth');
@@ -14,33 +16,34 @@ const FALLBACK_HEADERS = { 'anthropic-beta': 'server-side-fallback-2026-07-01' }
 const MAX_DOC_BYTES = 18 * 1024 * 1024; // stay under the API's 32MB request limit after base64
 const HISTORY_LIMIT = 40;
 
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: UPLOAD_DIR,
+    filename: (req, file, cb) =>
+      cb(null, `${Date.now()}-${crypto.randomBytes(6).toString('hex')}${path.extname(file.originalname)}`),
+  }),
+  limits: { fileSize: 25 * 1024 * 1024 },
+});
+
 const SYSTEM_PROMPT = `You are the quote comparison assistant inside Central Pharma's project management portal. Operations staff upload supplier quotes and rely on you for logical, measured analysis so they can exercise their own judgment from an accurate picture.
 
 Everything you do centres on THREE decision points, in this order:
-1. URS FIT — how closely each quote meets the User Requirement Specification (URS) attached to the project. Express this as an alignment percentage with a one-line justification (e.g. "≈90% in line with the URS — meets all functional requirements but omits the required validation documentation").
+1. URS FIT — how closely each quote meets the User Requirement Specification (URS) imported into the chat. Express this as an alignment percentage with a one-line justification (e.g. "≈90% in line with the URS — meets all functional requirements but omits the required validation documentation").
 2. PRICE — comparable costs in pounds sterling (£), VAT treatment noted, against the project budget where known.
 3. TIMELINE — lead time, installation duration, and fit against the project's target date.
 
 Conversation style:
-- Keep ordinary replies short and plain — a few sentences or a compact list. Save the depth for the full breakdown, which the user requests explicitly.
-- When the conversation opens, greet in one line, confirm which documents you can see (URS, form details, quotes), and ask AT MOST two or three short numbered questions — only about price, timeline, or URS priorities, and only what you genuinely need. Never interrogate; if answers don't come, proceed with stated assumptions.
-- If no quote documents are attached, say what is missing and ask for them via the paperclip. If no URS is present, flag that URS-fit scoring cannot be done until it is imported.
+- Keep ordinary replies short and plain — a few sentences or a compact list. Save depth for when the user asks for a full comparison.
+- Ask AT MOST two or three short numbered questions when genuinely needed — only about price, timeline, or URS priorities. Never interrogate; if answers don't come, proceed with stated assumptions.
+- If no quote documents are attached, say what is missing and ask for them via the paperclip. If no URS is present, flag that URS-fit scoring cannot be done until a project form is imported.
 
 Analysis rules:
 - Score every quote against the URS requirement by requirement where possible; call out each requirement a supplier fails, excludes, or leaves ambiguous.
 - Check quotes cover the same scope before comparing prices; flag mismatches prominently.
-- A more expensive supplier with higher URS fit may still be the better choice — say so when the evidence supports it.
-- Be explicit about assumptions and missing information; never invent figures. The final judgment rests with the operator.
+- A more expensive supplier with higher URS fit may still be the better choice — say so when the evidence supports it. Always give the pros AND cons of every supplier.
+- Be explicit about assumptions and missing information; never invent figures. The final judgment rests with the operator.`;
 
-When the user requests the full breakdown, produce a single comprehensive report with these sections:
-1. URS FIT — per supplier: alignment %, requirements met, requirements missed or unclear.
-2. PRICE — comparable cost table in £, VAT noted, ranked, set against budget.
-3. TIMELINE — lead times and installation duration per supplier vs the target date.
-4. RISKS & GAPS — missing information, expiring quotes, assumptions.
-5. QUESTIONS TO ASK SUPPLIERS — clarifications worth getting before committing.
-6. RECOMMENDATION — which supplier and why across URS fit, price, and timeline, with the runner-up and the conditions under which the runner-up would win.`;
-
-// Convert this project's uploaded documents into Claude content blocks.
+// Convert the chat's uploaded documents into Claude content blocks.
 function buildDocBlocks(docs) {
   const blocks = [];
   const skipped = [];
@@ -88,7 +91,7 @@ function buildFormText(project) {
   const items = db.prepare('SELECT * FROM budget_items WHERE project_id = ? ORDER BY id').all(project.id);
   const total = items.reduce((s, i) => s + i.amount, 0);
   const lines = [
-    `PROJECT FORM — ${project.name}`,
+    `PROJECT FORM — ${project.reference} · ${project.name}`,
     project.department && `Department: ${project.department}`,
     project.expense_type && `Expense type: ${project.expense_type}`,
     project.priority_tier && `Priority tier (set by Operations): ${project.priority_tier}`,
@@ -106,55 +109,38 @@ function buildFormText(project) {
   if (intake) {
     lines.push('', 'FORM ANSWERS:');
     for (const [k, v] of Object.entries(intake)) {
+      if (k.startsWith('_')) continue;
       if (v && String(v).trim()) lines.push(`- ${k}: ${Array.isArray(v) ? v.join(', ') : v}`);
     }
   }
   return lines.join('\n');
 }
 
-function buildContextText(project, quotes, skipped) {
-  const lines = [buildFormText(project)];
-  const ursDoc = project.urs_document_id
-    ? db.prepare('SELECT * FROM documents WHERE id = ?').get(project.urs_document_id)
-    : null;
-  lines.push('', ursDoc
-    ? `URS DOCUMENT: "${ursDoc.original_name}" is attached above — score every quote's alignment against it.`
-    : 'URS DOCUMENT: none attached yet — URS-fit scoring is not possible until it is provided.');
-  if (quotes.length) {
-    lines.push('', 'QUOTES LOGGED IN THE PORTAL:');
-    for (const q of quotes) {
-      lines.push(`- ${q.vendor}${q.reference ? ` (ref ${q.reference})` : ''}: £${q.amount} — status ${q.status}${q.quote_date ? `, dated ${q.quote_date}` : ''}${q.notes ? `. Notes: ${q.notes}` : ''}`);
-    }
-  }
-  if (skipped.length) {
-    lines.push('', `DOCUMENTS THAT COULD NOT BE ATTACHED: ${skipped.join('; ')}`);
-  }
-  lines.push('', 'The supplier quote documents uploaded for this project are attached above (if any).');
-  return lines.join('\n');
-}
-
-function loadHistory(projectId) {
+function loadHistory() {
   return db
-    .prepare(`
-      SELECT m.*, u.name AS user_name FROM ai_messages m
-      LEFT JOIN users u ON u.id = m.user_id
-      WHERE m.project_id = ? ORDER BY m.id
-    `)
-    .all(projectId);
+    .prepare('SELECT m.*, u.name AS user_name FROM quote_chat m LEFT JOIN users u ON u.id = m.user_id ORDER BY m.id')
+    .all();
 }
 
-async function callModel(project, history, latestUserContent) {
-  const quotes = db.prepare('SELECT * FROM quotes WHERE project_id = ? ORDER BY quote_date, id').all(project.id);
-  const docs = db.prepare('SELECT * FROM documents WHERE project_id = ? ORDER BY created_at, id').all(project.id);
+const docCount = () => db.prepare('SELECT COUNT(*) AS n FROM chat_documents').get().n;
+
+async function callModel(history, latestUserContent) {
+  const docs = db.prepare('SELECT * FROM chat_documents ORDER BY created_at, id').all();
   const { blocks, skipped } = buildDocBlocks(docs);
 
-  // Stable prefix (system + documents + project context) is cached; the growing
-  // chat history sits after the breakpoints so follow-up turns reuse the cache.
+  const contextLines = [
+    'The documents attached above were provided in the Compare Quotes chat: supplier quotes uploaded by Operations, plus any imported project forms and URS documents (imported forms appear as text documents named after their reference, e.g. "CP-0003-form.txt").',
+  ];
+  if (skipped.length) contextLines.push('', `DOCUMENTS THAT COULD NOT BE ATTACHED: ${skipped.join('; ')}`);
+  if (!docs.length) contextLines.push('', 'No documents are attached yet.');
+
+  // Stable prefix (system + documents + context) is cached; the growing chat
+  // history sits after the breakpoints so follow-up turns reuse the cache.
   const contextMessage = {
     role: 'user',
     content: [
       ...blocks,
-      { type: 'text', text: buildContextText(project, quotes, skipped), cache_control: { type: 'ephemeral' } },
+      { type: 'text', text: contextLines.join('\n'), cache_control: { type: 'ephemeral' } },
     ],
   };
   const chat = history.slice(-HISTORY_LIMIT).map((m) => ({
@@ -209,93 +195,102 @@ function requireConfigured(req, res, next) {
   next();
 }
 
-function getProject(req, res, next) {
-  const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id);
-  if (!project) return res.status(404).json({ error: 'Project not found' });
-  req.project = project;
-  next();
-}
-
-// Everyone signed in can read the shared conversation.
-router.get('/projects/:id/ai-chat', requireAuth, getProject, (req, res) => {
-  res.json({ messages: loadHistory(req.project.id) });
+// Read the shared conversation.
+router.get('/quotes-chat', requireAuth, (req, res) => {
+  res.json({
+    messages: loadHistory(),
+    doc_count: docCount(),
+    documents: db.prepare('SELECT id, original_name, created_at FROM chat_documents ORDER BY id').all(),
+  });
 });
 
-// Opens the conversation: the assistant greets and asks its short question set.
-router.post('/projects/:id/ai-chat/start', requireAuth, requireOps, requireConfigured, getProject, async (req, res) => {
-  const existing = loadHistory(req.project.id);
-  if (existing.length > 0) return res.json({ messages: existing });
-  try {
-    const reply = await callModel(
-      req.project,
-      [],
-      'Open the conversation: greet me in one line, note in one line what quote documents and logged quotes you can currently see for this project, then ask your short numbered questions (maximum four) to establish my decision priorities.',
-    );
-    db.prepare("INSERT INTO ai_messages (project_id, role, kind, content) VALUES (?, 'assistant', 'chat', ?)").run(req.project.id, reply);
-    res.json({ messages: loadHistory(req.project.id) });
-  } catch (e) {
-    aiErrorResponse(res, e);
-  }
+// Project forms eligible for import: approved or completed only.
+router.get('/quotes-chat/forms', requireAuth, requireOps, (req, res) => {
+  res.json(
+    db.prepare(`
+      SELECT p.id, p.reference, p.name, p.approval_status, p.urs_document_id,
+        u.name AS owner_name, u.department AS owner_department
+      FROM projects p LEFT JOIN users u ON u.id = p.owner_id
+      WHERE p.approval_status IN ('approved','completed')
+      ORDER BY p.id DESC
+    `).all()
+  );
+});
+
+// Upload supplier quote documents into the chat.
+router.post('/quotes-chat/documents', requireAuth, requireOps, upload.array('files', 10), (req, res) => {
+  if (!req.files || !req.files.length) return res.status(400).json({ error: 'No files uploaded' });
+  const insert = db.prepare('INSERT INTO chat_documents (stored_name, original_name, mime_type, size, uploaded_by) VALUES (?, ?, ?, ?, ?)');
+  for (const f of req.files) insert.run(f.filename, f.originalname, f.mimetype, f.size, req.user.id);
+  res.status(201).json({ doc_count: docCount() });
 });
 
 // Send a chat message.
-router.post('/projects/:id/ai-chat', requireAuth, requireOps, requireConfigured, getProject, async (req, res) => {
+router.post('/quotes-chat', requireAuth, requireOps, requireConfigured, async (req, res) => {
   const text = String((req.body || {}).message || '').trim().slice(0, 12000);
   if (!text) return res.status(400).json({ error: 'Message required' });
   try {
-    const reply = await callModel(req.project, loadHistory(req.project.id), text);
-    const insert = db.prepare("INSERT INTO ai_messages (project_id, role, kind, content, user_id) VALUES (?, ?, 'chat', ?, ?)");
-    insert.run(req.project.id, 'user', text, req.user.id);
-    insert.run(req.project.id, 'assistant', reply, null);
-    res.json({ messages: loadHistory(req.project.id) });
+    const reply = await callModel(loadHistory(), text);
+    const insert = db.prepare("INSERT INTO quote_chat (role, content, user_id) VALUES (?, ?, ?)");
+    insert.run('user', text, req.user.id);
+    insert.run('assistant', reply, null);
+    res.json({ messages: loadHistory() });
   } catch (e) {
     aiErrorResponse(res, e);
   }
 });
 
-// Generate the comprehensive breakdown.
-router.post('/projects/:id/ai-chat/breakdown', requireAuth, requireOps, requireConfigured, getProject, async (req, res) => {
-  const trigger = 'Please generate the full supplier comparison breakdown now, following the six-section structure. Use everything discussed in this conversation plus the attached documents and logged quotes. Where I have not stated a priority, use balanced weighting and say so.';
-  try {
-    const reply = await callModel(req.project, loadHistory(req.project.id), trigger);
-    const insert = db.prepare("INSERT INTO ai_messages (project_id, role, kind, content, user_id) VALUES (?, ?, ?, ?, ?)");
-    insert.run(req.project.id, 'user', 'chat', 'Generate the full breakdown', req.user.id);
-    insert.run(req.project.id, 'assistant', 'breakdown', reply, null);
-    res.json({ messages: loadHistory(req.project.id) });
-  } catch (e) {
-    aiErrorResponse(res, e);
+// Import a chosen project's form (and its URS) into the chat: the form becomes
+// a text document, the URS is attached alongside it.
+router.post('/quotes-chat/import/:projectId', requireAuth, requireOps, requireConfigured, async (req, res) => {
+  const p = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.projectId);
+  if (!p) return res.status(404).json({ error: 'Project not found' });
+  if (!['approved', 'completed'].includes(p.approval_status)) {
+    return res.status(400).json({ error: 'Only approved or completed projects can be imported' });
   }
-});
+  const insertDoc = db.prepare('INSERT INTO chat_documents (stored_name, original_name, mime_type, size, uploaded_by) VALUES (?, ?, ?, ?, ?)');
 
-// Import the project form + URS into the chat as an explicit reference point.
-router.post('/projects/:id/ai-chat/import-form', requireAuth, requireOps, requireConfigured, getProject, async (req, res) => {
-  const p = req.project;
+  // Form answers as a text document (replacing any earlier import of the same form).
+  const formName = `${p.reference}-form.txt`;
+  const old = db.prepare('SELECT * FROM chat_documents WHERE original_name = ?').all(formName);
+  for (const d of old) {
+    db.prepare('DELETE FROM chat_documents WHERE id = ?').run(d.id);
+    fs.rm(path.join(UPLOAD_DIR, d.stored_name), { force: true }, () => {});
+  }
+  const formText = buildFormText(p);
+  const stored = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}.txt`;
+  fs.writeFileSync(path.join(UPLOAD_DIR, stored), formText);
+  insertDoc.run(stored, formName, 'text/plain', Buffer.byteLength(formText), req.user.id);
+
+  // The project's URS document rides along (shares the stored file).
   const ursDoc = p.urs_document_id ? db.prepare('SELECT * FROM documents WHERE id = ?').get(p.urs_document_id) : null;
-  const importText = [
-    'FORM / URS IMPORT — use this as the reference baseline for all quote assessment:',
-    '',
-    buildFormText(p),
-    '',
-    ursDoc
-      ? `The URS document "${ursDoc.original_name}" is attached to this project — treat it as the authoritative requirement specification.`
-      : 'NOTE: no URS document is attached yet.',
-    '',
-    'Confirm in a few lines what you now have on record (form details, URS, and any quotes), and note anything still missing before quotes can be fully assessed.',
-  ].join('\n');
+  if (ursDoc) {
+    const already = db.prepare('SELECT 1 FROM chat_documents WHERE stored_name = ?').get(ursDoc.stored_name);
+    if (!already) insertDoc.run(ursDoc.stored_name, `${p.reference}-URS-${ursDoc.original_name}`, ursDoc.mime_type, ursDoc.size, req.user.id);
+  }
+
   try {
-    const reply = await callModel(p, loadHistory(p.id), importText);
-    const insert = db.prepare("INSERT INTO ai_messages (project_id, role, kind, content, user_id) VALUES (?, ?, 'chat', ?, ?)");
-    insert.run(p.id, 'user', `Imported the project form${ursDoc ? ' and URS' : ''} for reference.`, req.user.id);
-    insert.run(p.id, 'assistant', reply, null);
-    res.json({ messages: loadHistory(p.id) });
+    const trigger = `I have just imported the form for ${p.reference} · ${p.name}${ursDoc ? ' together with its URS document' : ' (no URS attached to it)'}. Confirm in a few lines what you now have on record for it, and note anything still missing before its quotes can be fully assessed.`;
+    const reply = await callModel(loadHistory(), trigger);
+    const insert = db.prepare("INSERT INTO quote_chat (role, content, user_id) VALUES (?, ?, ?)");
+    insert.run('user', `Imported ${p.reference} · ${p.name}${ursDoc ? ' with URS' : ''}.`, req.user.id);
+    insert.run('assistant', reply, null);
+    res.json({ messages: loadHistory(), doc_count: docCount() });
   } catch (e) {
     aiErrorResponse(res, e);
   }
 });
 
-// Reset the conversation (the documents and quotes are untouched).
-router.delete('/projects/:id/ai-chat', requireAuth, requireOps, getProject, (req, res) => {
-  db.prepare('DELETE FROM ai_messages WHERE project_id = ?').run(req.project.id);
+// Reset the chat back to zero: messages and chat documents both cleared.
+// Files owned by projects (imported URS copies) are kept on disk.
+router.delete('/quotes-chat', requireAuth, requireOps, (req, res) => {
+  const docs = db.prepare('SELECT * FROM chat_documents').all();
+  db.prepare('DELETE FROM chat_documents').run();
+  db.prepare('DELETE FROM quote_chat').run();
+  for (const d of docs) {
+    const ownedByProject = db.prepare('SELECT 1 FROM documents WHERE stored_name = ?').get(d.stored_name);
+    if (!ownedByProject) fs.rm(path.join(UPLOAD_DIR, d.stored_name), { force: true }, () => {});
+  }
   res.json({ ok: true });
 });
 
