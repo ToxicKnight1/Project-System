@@ -200,10 +200,7 @@ export default function ProjectDetail() {
     load();
   };
 
-  const approve = async () => {
-    if (!window.confirm(`Approve "${project.name}" (${project.reference})? The requester will be notified.`)) return;
-    await opsUpdate({ approval_status: 'approved' });
-  };
+  const approve = () => opsUpdate({ approval_status: 'approved' });
 
   const markCompleted = async () => {
     if (!window.confirm(`Mark "${project.name}" as completed?`)) return;
@@ -225,10 +222,13 @@ export default function ProjectDetail() {
     <>
       <div className="dash-bg" />
       <div className="page-head">
-        <div>
-          <h1 style={{ color: 'var(--navy)', fontSize: '1.9rem' }}>{project.name}</h1>
-          <div className="page-sub">
-            {[project.reference, project.department !== project.owner_department && project.department, author].filter(Boolean).join(' · ')}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <button className="btn" onClick={() => navigate(home)}>← Back</button>
+          <div>
+            <h1 style={{ color: 'var(--navy)', fontSize: '1.9rem' }}>{project.name}</h1>
+            <div className="page-sub">
+              {[project.reference, project.department !== project.owner_department && project.department, author].filter(Boolean).join(' · ')}
+            </div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -247,7 +247,6 @@ export default function ProjectDetail() {
           {canContribute && project.approval_status === 'approved' && (
             <button className="btn" onClick={markCompleted}>Mark completed</button>
           )}
-          <button className="btn" onClick={() => navigate(home)}>← Back</button>
           <button className="btn" disabled={!prevId} title="Previous project" onClick={() => navigate(`/projects/${prevId}`)}>←</button>
           <button className="btn" disabled={!nextId} title="Next project" onClick={() => navigate(`/projects/${nextId}`)}>→</button>
           {canEdit && <button className="btn" onClick={() => setEditForm(true)}>Edit form</button>}

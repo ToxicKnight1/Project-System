@@ -53,20 +53,21 @@ export default function Projects() {
   if (err) return <div className="form-err">{err}</div>;
   if (!projects) return <div className="muted">Loading…</div>;
 
-  const active = projects.filter((p) => p.approval_status !== 'completed');
+  const active = projects.filter((p) => p.approval_status === 'draft' || p.approval_status === 'awaiting_approval');
+  const approved = projects.filter((p) => p.approval_status === 'approved');
   const completed = projects.filter((p) => p.approval_status === 'completed');
+  const openRow = (x) => navigate(`/projects/${x.id}`);
 
   return (
     <>
       <div className="dash-bg" />
       <div className="page-head">
-        <div>
+        <div style={{ flex: 1 }}>
           <h1>Projects</h1>
           <div className="page-sub">{projects.length} total</div>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          {canCreate && <button className="btn primary" onClick={() => setWizard('new')}>+ New project</button>}
-        </div>
+        {canCreate && <button className="btn primary" onClick={() => setWizard('new')}>+ New project</button>}
+        <div style={{ flex: 1 }} />
       </div>
 
       <div className="proj-columns">
@@ -75,9 +76,16 @@ export default function Projects() {
           {active.length === 0 ? (
             <div className="empty">No active projects.</div>
           ) : (
-            active.map((p) => (
-              <ProjectRow key={p.id} p={p} onOpen={(x) => navigate(`/projects/${x.id}`)} onResume={resume} />
-            ))
+            active.map((p) => <ProjectRow key={p.id} p={p} onOpen={openRow} onResume={resume} />)
+          )}
+        </div>
+
+        <div className="proj-col card">
+          <h2 className="proj-col-title">Approved</h2>
+          {approved.length === 0 ? (
+            <div className="empty">Nothing approved yet.</div>
+          ) : (
+            approved.map((p) => <ProjectRow key={p.id} p={p} onOpen={openRow} onResume={() => {}} />)
           )}
         </div>
 
@@ -86,9 +94,7 @@ export default function Projects() {
           {completed.length === 0 ? (
             <div className="empty">Nothing completed yet.</div>
           ) : (
-            completed.map((p) => (
-              <ProjectRow key={p.id} p={p} onOpen={(x) => navigate(`/projects/${x.id}`)} onResume={() => {}} />
-            ))
+            completed.map((p) => <ProjectRow key={p.id} p={p} onOpen={openRow} onResume={() => {}} />)
           )}
         </div>
       </div>

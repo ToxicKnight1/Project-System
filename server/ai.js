@@ -34,7 +34,7 @@ Everything you do centres on THREE decision points, in this order:
 
 Conversation style:
 - Keep ordinary replies short and plain — a few sentences or a compact list. Save depth for when the user asks for a full comparison.
-- Ask AT MOST two or three short numbered questions when genuinely needed — only about price, timeline, or URS priorities. Never interrogate; if answers don't come, proceed with stated assumptions.
+- Ask AT MOST two or three short numbered questions when genuinely needed — only about price, timeline, or URS priorities (e.g. "Is the stated budget within your aim for this purchase, or is there flexibility?"). Never interrogate; if answers don't come, proceed with stated assumptions.
 - If no quote documents are attached, say what is missing and ask for them via the paperclip. If no URS is present, flag that URS-fit scoring cannot be done until a project form is imported.
 
 Analysis rules:
@@ -44,7 +44,9 @@ Analysis rules:
 - Be explicit about assumptions and missing information; never invent figures. The final judgment rests with the operator.`;
 
 // Convert the chat's uploaded documents into Claude content blocks.
-function buildDocBlocks(docs) {
+// .docx files (a common URS format) get their text extracted so the model can
+// read them alongside PDFs, images, and plain text.
+async function buildDocBlocks(docs) {
   const blocks = [];
   const skipped = [];
   let total = 0;
@@ -57,8 +59,26 @@ function buildDocBlocks(docs) {
     const ext = path.extname(d.original_name).toLowerCase();
     const imageTypes = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp' };
     const isText = ['.txt', '.csv', '.md', '.json'].includes(ext);
+    if (ext === '.docx') {
+      try {
+        const mammoth = require('mammoth');
+        const { value } = await mammoth.extractRawText({ path: filePath });
+        if (value && value.trim()) {
+          blocks.push({
+            type: 'document',
+            source: { type: 'text', media_type: 'text/plain', data: value.slice(0, 200000) },
+            title: d.original_name,
+          });
+        } else {
+          skipped.push(`${d.original_name} (no readable text found in the document)`);
+        }
+      } catch (err) {
+        skipped.push(`${d.original_name} (could not extract text: ${err.message})`);
+      }
+      continue;
+    }
     if (ext !== '.pdf' && !imageTypes[ext] && !isText) {
-      skipped.push(`${d.original_name} (unsupported format — upload PDF, image, or text)`);
+      skipped.push(`${d.original_name} (unsupported format — upload PDF, image, text, or .docx)`);
       continue;
     }
     const buf = fs.readFileSync(filePath);
@@ -126,7 +146,7 @@ const docCount = () => db.prepare('SELECT COUNT(*) AS n FROM chat_documents').ge
 
 async function callModel(history, latestUserContent) {
   const docs = db.prepare('SELECT * FROM chat_documents ORDER BY created_at, id').all();
-  const { blocks, skipped } = buildDocBlocks(docs);
+  const { blocks, skipped } = await buildDocBlocks(docs);
 
   const contextLines = [
     'The documents attached above were provided in the Compare Quotes chat: supplier quotes uploaded by Operations, plus any imported project forms and URS documents (imported forms appear as text documents named after their reference, e.g. "CP-0003-form.txt").',
