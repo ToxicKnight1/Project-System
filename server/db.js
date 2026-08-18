@@ -136,9 +136,12 @@ for (const [col, ddl] of [
   ['approval_status', "ALTER TABLE projects ADD COLUMN approval_status TEXT NOT NULL DEFAULT 'awaiting_approval'"],
   ['priority_tier', "ALTER TABLE projects ADD COLUMN priority_tier TEXT DEFAULT ''"],
   ['urs_document_id', 'ALTER TABLE projects ADD COLUMN urs_document_id INTEGER REFERENCES documents(id) ON DELETE SET NULL'],
+  ['reference', "ALTER TABLE projects ADD COLUMN reference TEXT DEFAULT ''"],
 ]) {
   if (!projectCols.some((c) => c.name === col)) db.exec(ddl);
 }
+// Every form carries a reference number; backfill any created before the column existed.
+db.prepare("UPDATE projects SET reference = 'CP-' || printf('%04d', id) WHERE reference IS NULL OR reference = ''").run();
 const taskCols = db.prepare('PRAGMA table_info(tasks)').all();
 if (!taskCols.some((c) => c.name === 'parent_id')) {
   db.exec('ALTER TABLE tasks ADD COLUMN parent_id INTEGER REFERENCES tasks(id) ON DELETE CASCADE');

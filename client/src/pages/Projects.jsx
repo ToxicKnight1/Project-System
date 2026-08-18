@@ -11,7 +11,7 @@ function ProjectRow({ p, onOpen, onResume }) {
       <div className="proj-main">
         <b>{p.name}</b>
         <div className="faint" style={{ fontSize: '0.76rem' }}>
-          {[p.department, p.owner_name && `Raised by ${p.owner_name}`].filter(Boolean).join(' · ')}
+          {[p.reference, p.department, p.owner_name && `Raised by ${p.owner_name}${p.owner_department ? ` · ${p.owner_department}` : ''}`].filter(Boolean).join(' · ')}
         </div>
       </div>
       <div className="proj-meta">
@@ -58,13 +58,13 @@ export default function Projects() {
 
   return (
     <>
+      <div className="dash-bg" />
       <div className="page-head">
         <div>
           <h1>Projects</h1>
           <div className="page-sub">{projects.length} total</div>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          {user.role === 'manager' && <button className="btn" onClick={() => navigate('/team')}>Team</button>}
           {canCreate && <button className="btn primary" onClick={() => setWizard('new')}>+ New project</button>}
         </div>
       </div>

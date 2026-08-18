@@ -5,6 +5,7 @@ import Login from './pages/Login.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Projects from './pages/Projects.jsx';
 import ProjectDetail from './pages/ProjectDetail.jsx';
+import QuotesPage from './pages/QuotesPage.jsx';
 import Team from './pages/Team.jsx';
 
 const AuthCtx = createContext(null);
@@ -96,7 +97,6 @@ export default function App() {
             <span className="topbar-logo"><b>central</b>pharma</span>
             <div className="topbar-links">
               <NavLink to={home} end className="nav-link">⌂ Home</NavLink>
-              {isOps && <NavLink to="/dashboard" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Dashboard</NavLink>}
               {isOps && <NavLink to="/projects" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Projects</NavLink>}
             </div>
             <NotificationBell />
@@ -114,6 +114,7 @@ export default function App() {
               <Route path="/dashboard" element={isOps ? <Dashboard /> : <Navigate to="/projects" replace />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/projects/:id" element={<ProjectDetail />} />
+              <Route path="/projects/:id/quotes" element={isOps ? <QuotesPage /> : <Navigate to="/projects" replace />} />
               <Route path="/team" element={<Team />} />
               <Route path="*" element={<Navigate to={home} />} />
             </Routes>

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api, getToken } from '../api.js';
 import { useAuth, ApprovalBadge, TierBadge, fmtMoney, fmtDate } from '../App.jsx';
-import CompareChat from './CompareChat.jsx';
 import IntakeWizard from './IntakeWizard.jsx';
 
 const TIERS = [
@@ -27,7 +26,7 @@ function downloadDoc(doc) {
     .catch(() => alert('Download failed'));
 }
 
-function Tasks({ project, isOps, reload }) {
+function Tasks({ project, canContribute, reload }) {
   const [title, setTitle] = useState('');
 
   const add = async (e) => {
@@ -50,24 +49,22 @@ function Tasks({ project, isOps, reload }) {
     <div className="detail-card card">
       <h3>Tasks</h3>
       {project.tasks.length === 0 && (
-        <div className="faint" style={{ padding: '6px 0 12px' }}>
-          No tasks yet.{!isOps && ' Operations manage the task list.'}
-        </div>
+        <div className="faint" style={{ padding: '6px 0 12px' }}>No tasks yet.</div>
       )}
       {project.tasks.map((t) => (
         <div key={t.id} className="task-row">
           <label className="task-check">
-            <input type="checkbox" checked={t.status === 'done'} disabled={!isOps} onChange={() => toggle(t)} />
+            <input type="checkbox" checked={t.status === 'done'} disabled={!canContribute} onChange={() => toggle(t)} />
             <span className={t.status === 'done' ? 'task-done' : ''}>{t.title}</span>
           </label>
-          {isOps && (
+          {canContribute && (
             <div className="task-actions">
               <button className="btn small danger" onClick={() => remove(t)}>✕</button>
             </div>
           )}
         </div>
       ))}
-      {isOps && (
+      {canContribute && (
         <form className="task-add" onSubmit={add}>
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Add a task…" />
           <button className="btn small primary">Add</button>
@@ -77,7 +74,7 @@ function Tasks({ project, isOps, reload }) {
   );
 }
 
-function BudgetBreakdown({ project, isOps, reload }) {
+function BudgetBreakdown({ project, canContribute, reload }) {
   const [label, setLabel] = useState('');
   const [amount, setAmount] = useState('');
 
@@ -100,7 +97,6 @@ function BudgetBreakdown({ project, isOps, reload }) {
       {project.budget_items.length === 0 ? (
         <div className="faint" style={{ padding: '6px 0 12px' }}>
           No components yet{project.budget != null ? ` — the requester estimated ${fmtMoney(project.budget)}.` : '.'}
-          {isOps && ' Add the components below; the total is calculated automatically.'}
         </div>
       ) : (
         <table className="tbl">
@@ -109,18 +105,18 @@ function BudgetBreakdown({ project, isOps, reload }) {
               <tr key={i.id}>
                 <td>{i.label}</td>
                 <td className="num">{fmtMoney(i.amount)}</td>
-                {isOps && <td className="num" style={{ width: 40 }}><button className="btn small danger" onClick={() => remove(i.id)}>✕</button></td>}
+                {canContribute && <td className="num" style={{ width: 40 }}><button className="btn small danger" onClick={() => remove(i.id)}>✕</button></td>}
               </tr>
             ))}
             <tr>
               <td><b>Total</b></td>
               <td className="num"><b>{fmtMoney(project.budget_total)}</b></td>
-              {isOps && <td />}
+              {canContribute && <td />}
             </tr>
           </tbody>
         </table>
       )}
-      {isOps && (
+      {canContribute && (
         <form className="task-add" onSubmit={add}>
           <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Component, e.g. Racking supply & install" />
           <input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="£" style={{ maxWidth: 140 }} />
@@ -165,13 +161,15 @@ export default function ProjectDetail() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [project, setProject] = useState(null);
-  const [tab, setTab] = useState('form');
   const [err, setErr] = useState('');
   const [editForm, setEditForm] = useState(false);
   const [siblings, setSiblings] = useState([]);
   const isOps = user.role === 'manager';
   const isOwner = project && project.owner_id === user.id;
-  const canEdit = isOps || (user.role === 'admin' && isOwner && project?.approval_status !== 'completed');
+  // The form belongs to its author; Operations contribute but do not edit it.
+  const canEdit = isOwner && project?.approval_status !== 'completed';
+  const canContribute = isOps || isOwner;
+  const home = isOps ? '/dashboard' : '/projects';
 
   const load = () => api(`/projects/${id}`).then(setProject).catch((e) => setErr(e.message));
   useEffect(() => { load(); }, [id]);
@@ -192,9 +190,23 @@ export default function ProjectDetail() {
 
   const intake = project.intake ? (() => { try { return JSON.parse(project.intake); } catch { return null; } })() : null;
   const ursDoc = project.urs_document_id ? project.documents.find((d) => d.id === project.urs_document_id) : null;
+  const author = project.owner_name
+    ? `Raised by ${project.owner_name}${project.owner_department ? ` · ${project.owner_department}` : ''}`
+    : null;
 
   const opsUpdate = async (body) => {
     await api(`/projects/${id}/ops`, { method: 'PUT', body });
+    load();
+  };
+
+  const approve = async () => {
+    if (!window.confirm(`Approve "${project.name}" (${project.reference})? The requester will be notified.`)) return;
+    await opsUpdate({ approval_status: 'approved' });
+  };
+
+  const markCompleted = async () => {
+    if (!window.confirm(`Mark "${project.name}" as completed?`)) return;
+    await api(`/projects/${id}/complete`, { method: 'POST' });
     load();
   };
 
@@ -210,23 +222,32 @@ export default function ProjectDetail() {
 
   return (
     <>
+      <div className="dash-bg" />
       <div className="page-head">
         <div>
           <div className="faint" style={{ fontSize: '0.76rem', marginBottom: 4 }}>
-            <a onClick={() => navigate('/projects')} style={{ cursor: 'pointer' }}>Projects</a> / {project.name}
+            <a onClick={() => navigate(home)} style={{ cursor: 'pointer' }}>Home</a> / {project.reference} · {project.name}
           </div>
-          <h1 style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-            {project.name} <ApprovalBadge value={project.approval_status} /> <TierBadge value={project.priority_tier} />
-          </h1>
+          <h1>{project.name}</h1>
           <div className="page-sub">
-            {[project.department, project.owner_name && `Raised by ${project.owner_name}`, project.due_date && `Due ${fmtDate(project.due_date)}`]
-              .filter(Boolean).join(' · ')}
+            {[project.reference, project.department !== project.owner_department && project.department, author].filter(Boolean).join(' · ')}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <ApprovalBadge value={project.approval_status} />
+          <TierBadge value={project.priority_tier} />
+          {project.due_date && <span className="muted" style={{ fontSize: '0.82rem' }}>Due {fmtDate(project.due_date)}</span>}
+          {isOps && project.approval_status === 'awaiting_approval' && (
+            <button className="btn approve" onClick={approve}>✓ Approve</button>
+          )}
+          {canContribute && project.approval_status === 'approved' && (
+            <button className="btn" onClick={markCompleted}>Mark completed</button>
+          )}
+          <button className="btn" onClick={() => navigate(home)}>← Back</button>
           <button className="btn" disabled={!prevId} title="Previous project" onClick={() => navigate(`/projects/${prevId}`)}>←</button>
           <button className="btn" disabled={!nextId} title="Next project" onClick={() => navigate(`/projects/${nextId}`)}>→</button>
           {canEdit && <button className="btn" onClick={() => setEditForm(true)}>Edit form</button>}
+          {isOps && <button className="btn" onClick={() => navigate(`/projects/${id}/quotes`)}>✦ Compare Quotes</button>}
         </div>
       </div>
 
@@ -248,11 +269,6 @@ export default function ProjectDetail() {
         <div className="card ops-panel" style={{ marginBottom: 22 }}>
           <b style={{ fontSize: '0.85rem' }}>Operations controls</b>
           <div className="ops-controls" style={{ marginTop: 10 }}>
-            <select value={project.approval_status} onChange={(e) => opsUpdate({ approval_status: e.target.value })}>
-              <option value="awaiting_approval">Awaiting approval</option>
-              <option value="approved">Approved</option>
-              <option value="completed">Completed</option>
-            </select>
             <select value={project.priority_tier || ''} onChange={(e) => opsUpdate({ priority_tier: e.target.value })}>
               <option value="">Priority tier…</option>
               {TIERS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
@@ -262,54 +278,43 @@ export default function ProjectDetail() {
         </div>
       )}
 
-      <div className="tab-nav">
-        <button className={`tab-btn${tab === 'form' ? ' active' : ''}`} onClick={() => setTab('form')}>Form Details</button>
-        {isOps && <button className={`tab-btn${tab === 'compare' ? ' active' : ''}`} onClick={() => setTab('compare')}>✦ Compare Quotes</button>}
-      </div>
-
-      <div className="tab-body">
-        {tab === 'form' && (
-          <div className="detail-grid">
-            <div className="detail-card card">
-              <h3>Project form</h3>
-              <table className="tbl form-tbl">
-                <tbody>
-                  <tr><td>Project name</td><td>{project.name}</td></tr>
-                  {intake && Object.entries(intake).map(([k, v]) => {
-                    const value = Array.isArray(v) ? v.join(', ') : v;
-                    if (!value || !String(value).trim()) return null;
-                    return <tr key={k}><td>{k}</td><td>{value}</td></tr>;
-                  })}
-                  <tr>
-                    <td>URS document *</td>
-                    <td>
-                      {ursDoc ? (
-                        <a style={{ cursor: 'pointer' }} onClick={() => downloadDoc(ursDoc)}>📄 {ursDoc.original_name}</a>
-                      ) : (
-                        <span className="badge red">Missing — required</span>
-                      )}
-                      {canEdit && (
-                        <label className="btn small" style={{ marginLeft: 10, cursor: 'pointer' }}>
-                          {ursDoc ? 'Replace' : 'Attach URS'}
-                          <input type="file" style={{ display: 'none' }} accept=".pdf,.doc,.docx,.txt,.md" onChange={uploadUrs} />
-                        </label>
-                      )}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <div>
-              <Tasks project={project} isOps={isOps} reload={load} />
-              <BudgetBreakdown project={project} isOps={isOps} reload={load} />
-              <Comments project={project} isOps={isOps} reload={load} />
-            </div>
-          </div>
-        )}
-
-        {tab === 'compare' && isOps && (
-          <CompareChat projectId={project.id} docCount={project.documents.length} hasUrs={!!ursDoc} onDocsChanged={load} />
-        )}
+      <div className="detail-grid">
+        <div className="detail-card card">
+          <h3>Project form</h3>
+          <table className="tbl form-tbl">
+            <tbody>
+              <tr><td>Reference</td><td>{project.reference}</td></tr>
+              <tr><td>Project name</td><td>{project.name}</td></tr>
+              {intake && Object.entries(intake).map(([k, v]) => {
+                if (k.startsWith('_')) return null;
+                const value = Array.isArray(v) ? v.join(', ') : v;
+                if (!value || !String(value).trim()) return null;
+                return <tr key={k}><td>{k}</td><td>{value}</td></tr>;
+              })}
+              <tr>
+                <td>URS document *</td>
+                <td>
+                  {ursDoc ? (
+                    <a style={{ cursor: 'pointer' }} onClick={() => downloadDoc(ursDoc)}>📄 {ursDoc.original_name}</a>
+                  ) : (
+                    <span className="badge red">Missing — required</span>
+                  )}
+                  {canEdit && (
+                    <label className="btn small" style={{ marginLeft: 10, cursor: 'pointer' }}>
+                      {ursDoc ? 'Replace' : 'Attach URS'}
+                      <input type="file" style={{ display: 'none' }} accept=".pdf,.doc,.docx,.txt,.md" onChange={uploadUrs} />
+                    </label>
+                  )}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <Tasks project={project} canContribute={canContribute} reload={load} />
+          <BudgetBreakdown project={project} canContribute={canContribute} reload={load} />
+          <Comments project={project} isOps={isOps} reload={load} />
+        </div>
       </div>
 
       {editForm && (

@@ -103,7 +103,7 @@ export default function CompareChat({ projectId, docCount = 0, hasUrs = false, o
           {canChat && (
             <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
               <button className="btn small" onClick={importForm} disabled={busy} title="Bring the project form and URS into the conversation">
-                ⇪ Import form/URS
+                ⇪ Import form
               </button>
               <button className="btn small primary" onClick={breakdown} disabled={busy || nothingToAnalyse}>Generate breakdown</button>
               <button className="btn small" onClick={reset} disabled={busy || messages.length === 0}>Reset</button>
@@ -115,8 +115,8 @@ export default function CompareChat({ projectId, docCount = 0, hasUrs = false, o
           {messages.length === 0 && !busy && (
             <div className="empty" style={{ padding: '40px 20px' }}>
               {nothingToAnalyse
-                ? 'The conversation starts once documentation is provided — attach the supplier quotes with the 📎 paperclip, or import the project form and URS.'
-                : 'Documents are attached. Import the form/URS or ask a question to begin the assessment.'}
+                ? 'The conversation starts once documentation is provided — attach the supplier quotes with the 📎 paperclip, or import the form.'
+                : 'Documents are attached. Import the form or ask a question to begin the assessment.'}
             </div>
           )}
           {messages.map((m) => (

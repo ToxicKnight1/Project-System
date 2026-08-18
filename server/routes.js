@@ -115,7 +115,7 @@ function projectVisible(user, p) {
 
 function getVisibleProject(req, res) {
   const p = db
-    .prepare('SELECT p.*, u.name AS owner_name FROM projects p LEFT JOIN users u ON u.id = p.owner_id WHERE p.id = ?')
+    .prepare('SELECT p.*, u.name AS owner_name, u.department AS owner_department FROM projects p LEFT JOIN users u ON u.id = p.owner_id WHERE p.id = ?')
     .get(req.params.id);
   if (!p || !projectVisible(req.user, p)) {
     res.status(404).json({ error: 'Project not found' });
@@ -124,9 +124,15 @@ function getVisibleProject(req, res) {
   return p;
 }
 
+// The form itself belongs to its author — Operations cannot edit someone
+// else's form, only contribute (tasks, budget components, comments).
 function canEditProject(user, p) {
-  if (user.role === 'manager') return true;
-  return user.role === 'admin' && p.owner_id === user.id && p.approval_status !== 'completed';
+  return p.owner_id === user.id && p.approval_status !== 'completed';
+}
+
+// Tasks and budget components are open to Operations and the form's author.
+function canContribute(user, p) {
+  return user.role === 'manager' || p.owner_id === user.id;
 }
 
 function notify(userId, content, projectId) {
@@ -141,7 +147,7 @@ const budgetTotal = (projectId) =>
 router.get('/dashboard', requireOps, (req, res) => {
   const all = db
     .prepare(`
-      SELECT p.*, u.name AS owner_name,
+      SELECT p.*, u.name AS owner_name, u.department AS owner_department,
         (SELECT COALESCE(SUM(amount),0) FROM budget_items b WHERE b.project_id = p.id) AS budget_total
       FROM projects p LEFT JOIN users u ON u.id = p.owner_id
       WHERE p.approval_status != 'draft'
@@ -151,6 +157,7 @@ router.get('/dashboard', requireOps, (req, res) => {
   res.json({
     awaiting: all.filter((p) => p.approval_status === 'awaiting_approval'),
     approved: all.filter((p) => p.approval_status === 'approved'),
+    completed: all.filter((p) => p.approval_status === 'completed'),
     completed_count: all.filter((p) => p.approval_status === 'completed').length,
   });
 });
@@ -209,7 +216,7 @@ router.post('/notifications/read', (req, res) => {
 router.get('/projects', (req, res) => {
   const rows = db
     .prepare(`
-      SELECT p.*, u.name AS owner_name,
+      SELECT p.*, u.name AS owner_name, u.department AS owner_department,
         (SELECT COALESCE(SUM(amount),0) FROM budget_items b WHERE b.project_id = p.id) AS budget_total
       FROM projects p LEFT JOIN users u ON u.id = p.owner_id
       ORDER BY p.created_at DESC
@@ -260,6 +267,7 @@ router.post('/projects', requireRole('manager'), (req, res) => {
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'planning')`)
     .run(name, description, department, expense_type, intake ? JSON.stringify(intake) : '', req.user.id,
       draft ? 'draft' : 'awaiting_approval', budget);
+  db.prepare("UPDATE projects SET reference = 'CP-' || printf('%04d', id) WHERE id = ?").run(info.lastInsertRowid);
   replaceBudgetComponents(info.lastInsertRowid, budget_components);
   res.status(201).json(db.prepare('SELECT * FROM projects WHERE id = ?').get(info.lastInsertRowid));
 });
@@ -306,6 +314,19 @@ router.put('/projects/:id/ops', requireOps, (req, res) => {
   res.json(db.prepare('SELECT * FROM projects WHERE id = ?').get(p.id));
 });
 
+// Once approved, both Operations and the form's author can mark it completed.
+router.post('/projects/:id/complete', (req, res) => {
+  const p = getVisibleProject(req, res);
+  if (!p) return;
+  if (!canContribute(req.user, p)) return res.status(403).json({ error: 'Not allowed' });
+  if (p.approval_status !== 'approved') return res.status(400).json({ error: 'Only approved projects can be marked completed' });
+  db.prepare("UPDATE projects SET approval_status = 'completed' WHERE id = ?").run(p.id);
+  if (p.owner_id && p.owner_id !== req.user.id) {
+    notify(p.owner_id, `Your project "${p.name}" has been marked as completed.`, p.id);
+  }
+  res.json(db.prepare('SELECT * FROM projects WHERE id = ?').get(p.id));
+});
+
 router.delete('/projects/:id', (req, res) => {
   const p = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id);
   if (!p) return res.status(404).json({ error: 'Project not found' });
@@ -317,10 +338,11 @@ router.delete('/projects/:id', (req, res) => {
   res.json({ ok: true });
 });
 
-// ── Tasks (operations only; requesters see them read-only) ────────
-router.post('/projects/:id/tasks', requireOps, (req, res) => {
+// ── Tasks (operations and the form's author) ──────────────────────
+router.post('/projects/:id/tasks', (req, res) => {
   const p = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id);
   if (!p) return res.status(404).json({ error: 'Project not found' });
+  if (!canContribute(req.user, p)) return res.status(403).json({ error: 'Not allowed' });
   const { title } = req.body || {};
   if (!title || !String(title).trim()) return res.status(400).json({ error: 'Title required' });
   const info = db
@@ -329,25 +351,31 @@ router.post('/projects/:id/tasks', requireOps, (req, res) => {
   res.status(201).json(db.prepare('SELECT * FROM tasks WHERE id = ?').get(info.lastInsertRowid));
 });
 
-router.put('/tasks/:id', requireOps, (req, res) => {
+router.put('/tasks/:id', (req, res) => {
   const t = db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
   if (!t) return res.status(404).json({ error: 'Task not found' });
+  const proj = db.prepare('SELECT * FROM projects WHERE id = ?').get(t.project_id);
+  if (!canContribute(req.user, proj)) return res.status(403).json({ error: 'Not allowed' });
   const { title = t.title, done } = req.body || {};
   const status = done === undefined ? t.status : done ? 'done' : 'todo';
   db.prepare('UPDATE tasks SET title=?, status=? WHERE id=?').run(title, status, t.id);
   res.json(db.prepare('SELECT * FROM tasks WHERE id = ?').get(t.id));
 });
 
-router.delete('/tasks/:id', requireOps, (req, res) => {
-  const info = db.prepare('DELETE FROM tasks WHERE id = ?').run(req.params.id);
-  if (!info.changes) return res.status(404).json({ error: 'Task not found' });
+router.delete('/tasks/:id', (req, res) => {
+  const t = db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
+  if (!t) return res.status(404).json({ error: 'Task not found' });
+  const proj = db.prepare('SELECT * FROM projects WHERE id = ?').get(t.project_id);
+  if (!canContribute(req.user, proj)) return res.status(403).json({ error: 'Not allowed' });
+  db.prepare('DELETE FROM tasks WHERE id = ?').run(t.id);
   res.json({ ok: true });
 });
 
-// ── Budget components (operations only; total is derived) ─────────
-router.post('/projects/:id/budget-items', requireOps, (req, res) => {
+// ── Budget components (operations and the form's author) ──────────
+router.post('/projects/:id/budget-items', (req, res) => {
   const p = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id);
   if (!p) return res.status(404).json({ error: 'Project not found' });
+  if (!canContribute(req.user, p)) return res.status(403).json({ error: 'Not allowed' });
   const { label, amount } = req.body || {};
   if (!label || !String(label).trim()) return res.status(400).json({ error: 'Component name required' });
   const value = Number(amount);
@@ -359,9 +387,11 @@ router.post('/projects/:id/budget-items', requireOps, (req, res) => {
   });
 });
 
-router.delete('/budget-items/:id', requireOps, (req, res) => {
+router.delete('/budget-items/:id', (req, res) => {
   const item = db.prepare('SELECT * FROM budget_items WHERE id = ?').get(req.params.id);
   if (!item) return res.status(404).json({ error: 'Not found' });
+  const proj = db.prepare('SELECT * FROM projects WHERE id = ?').get(item.project_id);
+  if (!canContribute(req.user, proj)) return res.status(403).json({ error: 'Not allowed' });
   db.prepare('DELETE FROM budget_items WHERE id = ?').run(item.id);
   res.json({
     items: db.prepare('SELECT * FROM budget_items WHERE project_id = ? ORDER BY id').all(item.project_id),
@@ -414,30 +444,75 @@ router.delete('/documents/:id', requireOps, (req, res) => {
   res.json({ ok: true });
 });
 
-// ── Monthly report (operations only) ──────────────────────────────
+// ── Monthly report (operations only): PDF with grand budget total ─
 router.get('/reports/monthly', requireOps, (req, res) => {
+  const PDFDocument = require('pdfkit');
   const rows = db
     .prepare(`
-      SELECT p.*, u.name AS owner_name,
+      SELECT p.*, u.name AS owner_name, u.department AS owner_department,
         (SELECT COALESCE(SUM(amount),0) FROM budget_items b WHERE b.project_id = p.id) AS budget_total
       FROM projects p LEFT JOIN users u ON u.id = p.owner_id
       WHERE p.approval_status != 'draft'
       ORDER BY p.created_at
     `)
     .all();
-  const esc = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
-  const header = ['Project', 'Owner', 'Department', 'Expense type', 'Status', 'Priority', 'Budget total (£)', 'Start date', 'Due date', 'Created', 'URS attached'];
-  const lines = [header.map(esc).join(',')];
-  for (const p of rows) {
-    lines.push([
-      p.name, p.owner_name, p.department, p.expense_type, p.approval_status, p.priority_tier,
-      p.budget_total || p.budget || 0, p.start_date, p.due_date, p.created_at, p.urs_document_id ? 'Yes' : 'No',
-    ].map(esc).join(','));
-  }
+  const money = (n) => `£${Number(n || 0).toLocaleString('en-GB')}`;
+  const grandTotal = rows.reduce((s, p) => s + (p.budget_total || p.budget || 0), 0);
   const stamp = new Date().toISOString().slice(0, 10);
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', `attachment; filename="project-report-${stamp}.csv"`);
-  res.send(lines.join('\n'));
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="monthly-report-${stamp}.pdf"`);
+  const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 36 });
+  doc.pipe(res);
+
+  const navy = '#221a66';
+  doc.fillColor(navy).fontSize(20).font('Helvetica-Bold').text('Central Pharma — Monthly Project Report');
+  doc.fillColor('#51637f').fontSize(10).font('Helvetica').text(`Generated ${stamp} · ${rows.length} project${rows.length === 1 ? '' : 's'}`);
+  doc.moveDown(1.2);
+
+  const cols = [
+    ['Ref', 60], ['Project', 130], ['Raised by', 110], ['Dept', 80], ['Type', 70],
+    ['Status', 90], ['Priority', 65], ['Due date', 70], ['Budget', 85],
+  ];
+  const startX = doc.page.margins.left;
+  const drawRow = (cells, opts = {}) => {
+    const y = doc.y;
+    let x = startX;
+    doc.font(opts.bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(9).fillColor(opts.color || '#1f2a44');
+    cells.forEach((cell, i) => {
+      doc.text(String(cell == null ? '' : cell), x, y, { width: cols[i][1] - 6, lineBreak: false, ellipsis: true });
+      x += cols[i][1];
+    });
+    doc.y = y + 16;
+    doc.x = startX;
+  };
+  const rule = () => {
+    doc.moveTo(startX, doc.y - 4).lineTo(startX + cols.reduce((s, c) => s + c[1], 0), doc.y - 4)
+      .strokeColor('#b9cfe8').lineWidth(0.5).stroke();
+  };
+
+  drawRow(cols.map((c) => c[0]), { bold: true, color: navy });
+  rule();
+  const statusLabel = { awaiting_approval: 'Awaiting approval', approved: 'Approved', completed: 'Completed' };
+  for (const p of rows) {
+    if (doc.y > doc.page.height - 70) {
+      doc.addPage();
+      drawRow(cols.map((c) => c[0]), { bold: true, color: navy });
+      rule();
+    }
+    drawRow([
+      p.reference, p.name,
+      p.owner_name ? `${p.owner_name}${p.owner_department ? ` (${p.owner_department})` : ''}` : '',
+      p.department, p.expense_type, statusLabel[p.approval_status] || p.approval_status,
+      p.priority_tier, p.due_date || '—', money(p.budget_total || p.budget),
+    ]);
+    rule();
+  }
+
+  doc.moveDown(1);
+  doc.font('Helvetica-Bold').fontSize(13).fillColor(navy)
+    .text(`Grand total of all budgeted costs: ${money(grandTotal)}`, startX);
+  doc.end();
 });
 
 module.exports = router;

@@ -78,6 +78,23 @@ a { color: var(--accent); text-decoration: none; }
     url('/dashboard-bg.jpg') center / cover no-repeat;
 }
 
+/* ── Operations dashboard layout ── */
+/* Three status tiles left-aligned; the budget tile narrower and pushed right. */
+.dash-tiles { display: grid; grid-template-columns: 1fr 1fr 1fr 0.85fr; gap: 18px; }
+.dash-tiles .stat-tile.budget { margin-left: 24px; }
+.dash-columns { display: grid; grid-template-columns: 1.3fr 1.1fr 0.9fr; gap: 20px; align-items: start; }
+.ops-row.column { flex-direction: column; align-items: stretch; gap: 8px; }
+.ops-row.column .ops-controls { justify-content: flex-end; flex-wrap: wrap; }
+.help-q {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 50%; cursor: help;
+  background: var(--navy); color: #fff; font-size: 0.7rem; font-weight: 800;
+  vertical-align: 2px;
+}
+.report-corner { position: fixed; right: 20px; bottom: 74px; z-index: 40; }
+.btn.approve { background: #15803d; border-color: #15803d; }
+.btn.approve:hover { background: #16a34a; }
+
 /* ── Projects: Active / Completed columns ── */
 .proj-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
 .proj-col-title { font-size: 1rem; font-weight: 800; color: var(--text-strong); margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
