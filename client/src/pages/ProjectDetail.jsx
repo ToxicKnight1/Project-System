@@ -317,9 +317,9 @@ export default function ProjectDetail() {
                   ) : (
                     <span className="badge red">Missing — required</span>
                   )}
-                  {canEdit && (
+                  {canContribute && (
                     <label className="btn small" style={{ marginLeft: 10, cursor: 'pointer' }}>
-                      {ursDoc ? 'Replace' : 'Attach URS'}
+                      {ursDoc ? 'Replace' : '+ Attach URS'}
                       <input type="file" style={{ display: 'none' }} accept=".pdf,.doc,.docx,.txt,.md" onChange={uploadUrs} />
                     </label>
                   )}

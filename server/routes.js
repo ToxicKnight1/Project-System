@@ -447,7 +447,7 @@ router.post('/projects/:id/comments', (req, res) => {
 router.post('/projects/:id/documents', upload.single('file'), (req, res) => {
   const p = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id);
   if (!p || !projectVisible(req.user, p)) return res.status(404).json({ error: 'Project not found' });
-  if (!canEditProject(req.user, p)) return res.status(403).json({ error: 'You cannot edit this project' });
+  if (!canContribute(req.user, p)) return res.status(403).json({ error: 'Not allowed' });
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
   const info = db
     .prepare('INSERT INTO documents (project_id, stored_name, original_name, mime_type, size, uploaded_by) VALUES (?, ?, ?, ?, ?, ?)')
