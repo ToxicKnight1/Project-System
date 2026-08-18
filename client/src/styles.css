@@ -86,7 +86,7 @@ a { color: var(--accent); text-decoration: none; }
 .dash-columns { display: grid; grid-template-columns: 1.15fr 1.15fr 1.15fr 0.9fr; gap: 18px; align-items: start; }
 .dash-col .label { font-size: 1rem; font-weight: 800; color: var(--text-strong); margin-bottom: 8px; }
 .dash-col .value { font-size: 1.7rem; font-weight: 800; color: var(--text-strong); }
-.dash-col .red-rule { border-top: 2.6px solid #b91c1c; margin: 12px 0 6px; }
+.dash-col .red-rule { border-top: 3.5px solid #b91c1c; margin: 12px 0 6px; }
 .dash-columns > * { min-width: 0; }
 .dash-columns .stat-tile.budget-slot { visibility: hidden; }
 .ops-row.column { flex-direction: column; align-items: stretch; gap: 8px; }
@@ -103,7 +103,7 @@ a { color: var(--accent); text-decoration: none; }
 
 /* ── Projects: Active / Completed columns ── */
 .proj-columns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; align-items: start; }
-.proj-col-title { font-size: 1rem; font-weight: 800; color: var(--text-strong); margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2.6px solid #b91c1c; }
+.proj-col-title { font-size: 1rem; font-weight: 800; color: var(--text-strong); margin-bottom: 14px; padding-bottom: 10px; border-bottom: 3.5px solid #b91c1c; }
 .proj-row {
   display: flex; justify-content: space-between; align-items: center; gap: 12px;
   padding: 12px 10px; border-radius: 10px; cursor: pointer;
@@ -205,6 +205,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .badge.green { background: #d5f5dd; color: #15803d; }
 .badge.yellow { background: #fdeec8; color: #92600e; }
 .badge.red { background: #fadddd; color: #b91c1c; }
+.badge.dgreen { background: #0b4f26; color: #a7f3c9; }
 
 /* ── Forms ── */
 .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
@@ -444,3 +445,12 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 }
 .month-nav .btn.small { padding: 8px 12px; }
 .year-corner { font-size: 1.15rem; font-weight: 800; color: var(--navy); text-align: right; flex: 1; }
+
+/* Numbered rows and red separators between projects */
+.row-num { font-weight: 800; color: var(--text-strong); flex-shrink: 0; }
+.dash-col .ops-row { border-bottom: 1.5px solid #b91c1c; }
+.dash-col .ops-row:last-child { border-bottom: none; }
+.proj-col .proj-row { border-radius: 0; }
+.proj-col .proj-row:not(:last-child) { border-bottom: 1.5px solid #b91c1c; }
+.proj-meta .num { color: var(--accent); font-weight: 600; }
+.col-count { float: right; font-size: 1.1rem; font-weight: 800; color: var(--text-strong); }

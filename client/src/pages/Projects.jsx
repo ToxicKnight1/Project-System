@@ -4,10 +4,11 @@ import { api } from '../api.js';
 import { useAuth, ApprovalBadge, TierBadge, fmtMoney, fmtDate, MonthNav } from '../App.jsx';
 import IntakeWizard from './IntakeWizard.jsx';
 
-function ProjectRow({ p, onOpen, onResume }) {
+function ProjectRow({ p, onOpen, onResume, index }) {
   const isDraft = p.approval_status === 'draft';
   return (
     <div className="proj-row" onClick={() => (isDraft ? onResume(p) : onOpen(p))}>
+      <span className="row-num">{index + 1}.</span>
       <div className="proj-main">
         <b>{p.name}</b>
         <div className="faint" style={{ fontSize: '0.76rem' }}>
@@ -74,29 +75,29 @@ export default function Projects() {
 
       <div className="proj-columns">
         <div className="proj-col card">
-          <h2 className="proj-col-title">Awaiting approval</h2>
+          <h2 className="proj-col-title">Awaiting approval <span className="col-count">{active.length}</span></h2>
           {active.length === 0 ? (
             <div className="empty">Nothing awaiting approval.</div>
           ) : (
-            active.map((p) => <ProjectRow key={p.id} p={p} onOpen={openRow} onResume={resume} />)
+            active.map((p, i) => <ProjectRow key={p.id} p={p} index={i} onOpen={openRow} onResume={resume} />)
           )}
         </div>
 
         <div className="proj-col card">
-          <h2 className="proj-col-title">Approved & running</h2>
+          <h2 className="proj-col-title">Approved & running <span className="col-count">{approved.length}</span></h2>
           {approved.length === 0 ? (
             <div className="empty">Nothing approved yet.</div>
           ) : (
-            approved.map((p) => <ProjectRow key={p.id} p={p} onOpen={openRow} onResume={() => {}} />)
+            approved.map((p, i) => <ProjectRow key={p.id} p={p} index={i} onOpen={openRow} onResume={() => {}} />)
           )}
         </div>
 
         <div className="proj-col card completed">
-          <h2 className="proj-col-title">Completed</h2>
+          <h2 className="proj-col-title">Completed <span className="col-count">{completed.length}</span></h2>
           {completed.length === 0 ? (
             <div className="empty">Nothing completed yet.</div>
           ) : (
-            completed.map((p) => <ProjectRow key={p.id} p={p} onOpen={openRow} onResume={() => {}} />)
+            completed.map((p, i) => <ProjectRow key={p.id} p={p} index={i} onOpen={openRow} onResume={() => {}} />)
           )}
         </div>
       </div>

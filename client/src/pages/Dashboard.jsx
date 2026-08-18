@@ -4,17 +4,20 @@ import { api, getToken } from '../api.js';
 import { fmtMoney, fmtDate, MonthNav } from '../App.jsx';
 
 // Read-only row: approving and status changes happen inside the form itself.
-function OpsRow({ p }) {
+function OpsRow({ p, index }) {
   const navigate = useNavigate();
   return (
     <div className="ops-row column">
-      <div className="ops-name" onClick={() => navigate(`/projects/${p.id}`)}>
-        <b>{p.name}</b>
-        <div className="faint" style={{ fontSize: '0.74rem' }}>
-          {[p.reference, p.owner_name && `Raised by ${p.owner_name}${p.owner_department ? ` · ${p.owner_department}` : ''}`, `Submitted ${fmtDate(p.created_at)}`].filter(Boolean).join(' · ')}
-        </div>
-        <div className="muted" style={{ fontSize: '0.78rem', marginTop: 4 }}>
-          {[fmtMoney(p.budget_total || p.budget), p.due_date && `Due ${fmtDate(p.due_date)}`].filter(Boolean).join(' · ')}
+      <div className="ops-name" style={{ display: 'flex', gap: 10 }} onClick={() => navigate(`/projects/${p.id}`)}>
+        <span className="row-num">{index + 1}.</span>
+        <div style={{ minWidth: 0 }}>
+          <b>{p.name}</b>
+          <div className="faint" style={{ fontSize: '0.74rem' }}>
+            {[p.reference, p.owner_name && `Raised by ${p.owner_name}${p.owner_department ? ` · ${p.owner_department}` : ''}`, `Submitted ${fmtDate(p.created_at)}`].filter(Boolean).join(' · ')}
+          </div>
+          <div style={{ fontSize: '0.78rem', marginTop: 4, color: 'var(--accent)', fontWeight: 600 }}>
+            {[fmtMoney(p.budget_total || p.budget), p.due_date && `Due ${fmtDate(p.due_date)}`].filter(Boolean).join(' · ')}
+          </div>
         </div>
       </div>
     </div>
@@ -54,15 +57,17 @@ export default function Dashboard() {
 
   const Column = ({ label, count, items, empty, help }) => (
     <div className="card dash-col">
-      <div className="label">
-        {label}{help && <> <span className="help-q" title={help}>?</span></>}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <div className="label">
+          {label}{help && <> <span className="help-q" title={help}>?</span></>}
+        </div>
+        <div className="value" style={{ fontSize: '1.35rem' }}>{count}</div>
       </div>
-      <div className="value">{count}</div>
       <div className="red-rule" />
       {items.length === 0 ? (
         <div className="empty">{empty}</div>
       ) : (
-        items.map((p) => <OpsRow key={p.id} p={p} />)
+        items.map((p, i) => <OpsRow key={p.id} p={p} index={i} />)
       )}
     </div>
   );
@@ -89,7 +94,7 @@ export default function Dashboard() {
         <Column label="Approved & running" count={approved.length} items={approved} empty="No approved projects in flight." />
         <Column label="Completed" count={completed.length} items={completed} empty="Nothing completed yet." />
         <div>
-          <div className="stat-tile budget" style={{ marginBottom: 18 }}>
+          <div className="stat-tile budget" style={{ marginBottom: 10 }}>
             <div className="label" style={{ color: '#b91c1c' }}>Completed project expenditure</div>
             <div className="value">{fmtMoney(completed.reduce((s, p) => s + (p.budget_total || p.budget || 0), 0))}</div>
           </div>

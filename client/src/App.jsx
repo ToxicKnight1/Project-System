@@ -154,7 +154,7 @@ export const APPROVAL_LABELS = {
   draft: ['Draft', 'gray'],
   awaiting_approval: ['Awaiting approval', 'yellow'],
   approved: ['Approved', 'green'],
-  completed: ['Completed', 'gray'],
+  completed: ['Completed', 'dgreen'],
 };
 
 export const TIER_LABELS = {
