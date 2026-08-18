@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api, setToken } from '../api.js';
 import { useAuth } from '../App.jsx';
 
@@ -13,6 +13,21 @@ export default function Login() {
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+
+  // As soon as a known company email is typed on Sign In, shift the
+  // Operations/Admin pill to the side that account actually belongs to.
+  useEffect(() => {
+    if (mode !== 'signin' || !/^\S+@\S+\.\S+$/.test(form.email)) return undefined;
+    const t = setTimeout(() => {
+      api('/auth/lookup', { method: 'POST', body: { email: form.email } })
+        .then((d) => {
+          if (d.role === 'manager') setRole('operations');
+          else if (d.role === 'admin') setRole('admin');
+        })
+        .catch(() => {});
+    }, 350);
+    return () => clearTimeout(t);
+  }, [form.email, mode]);
 
   const switchMode = (m) => {
     setMode(m);

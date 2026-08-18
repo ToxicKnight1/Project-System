@@ -32,6 +32,15 @@ router.post('/auth/login', (req, res) => {
   });
 });
 
+// Lets the login card shift the Operations/Admin pill to the account's actual
+// side as soon as a known email is typed. Only exposes the role, nothing else.
+router.post('/auth/lookup', (req, res) => {
+  const { email } = req.body || {};
+  if (!email) return res.json({ role: null });
+  const user = db.prepare('SELECT role FROM users WHERE email = ? AND active = 1').get(email);
+  res.json({ role: user ? user.role : null });
+});
+
 // Self-service signup from the login card. The role pills map:
 // "admin" -> admin (requester: raises project forms), "operations" -> manager (operational control).
 router.post('/auth/register', (req, res) => {
