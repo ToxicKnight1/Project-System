@@ -345,21 +345,21 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 
 /* ── Intake wizard ── */
 .modal.wizard {
-  max-width: 960px; padding: 48px 36px; margin: auto;
-  min-height: min(860px, 88vh); display: flex; flex-direction: column;
+  max-width: 840px; padding: 40px 32px; margin: auto;
+  min-height: min(760px, 82vh); display: flex; flex-direction: column;
 }
 .modal.wizard .actions { margin-top: auto; padding-top: 24px; }
 
 /* Larger type inside the wizard */
-.modal.wizard h2 { font-size: 1.7rem; margin-bottom: 8px; }
-.modal.wizard .wizard-progress span { font-size: 1.15rem; }
-.modal.wizard .field label { font-size: 1.15rem; margin-bottom: 8px; }
+.modal.wizard h2 { font-size: 1.5rem; margin-bottom: 8px; }
+.modal.wizard .wizard-progress span { font-size: 1.02rem; }
+.modal.wizard .field label { font-size: 1.02rem; margin-bottom: 8px; }
 .modal.wizard .field input,
 .modal.wizard .field select,
-.modal.wizard .field textarea { font-size: 1.35rem; padding: 13px 16px; }
-.modal.wizard .choice { font-size: 1.25rem; padding: 16px 18px; }
-.modal.wizard .form-err { font-size: 1.15rem; }
-.modal.wizard .btn { font-size: 1.25rem; padding: 12px 24px; }
+.modal.wizard .field textarea { font-size: 1.2rem; padding: 11px 14px; }
+.modal.wizard .choice { font-size: 1.1rem; padding: 13px 15px; }
+.modal.wizard .form-err { font-size: 1.02rem; }
+.modal.wizard .btn { font-size: 1.1rem; padding: 10px 20px; }
 .wizard-head { margin-bottom: 18px; }
 .wizard-progress { margin-top: 10px; }
 .wizard-progress span { font-size: 0.78rem; color: var(--text-muted); display: block; margin-bottom: 7px; }
@@ -372,7 +372,8 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
   padding: 10px 12px; font-size: 0.84rem; color: var(--text);
 }
 .choice:hover { border-color: var(--text-faint); }
-.choice.selected { border-color: var(--accent); background: #0c1f2e; }
+.choice.selected { border-color: var(--accent); background: var(--navy); color: #fff; }
+.choice.selected b { color: #fff; }
 .choice input { margin-top: 3px; accent-color: var(--accent); }
 .choice b { color: var(--text-strong); }
 
