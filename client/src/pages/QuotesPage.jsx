@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
-import { fmtDate } from '../App.jsx';
+import { fmtDate, MonthNav } from '../App.jsx';
 
 // The Compare Quotes chat history log: saved chats to resume, closed chats to
 // review. Each chat is labelled by the form imported into it.
@@ -60,11 +60,12 @@ export default function QuotesPage() {
       <div className="dash-bg" />
       <div className="page-head">
         <div style={{ flex: 1 }}>
-          <h1 style={{ color: 'var(--navy)', fontSize: '1.6rem' }}>✦ Compare Quotes</h1>
-          <div className="page-sub">Chat history</div>
+          <h1>Compare Quotes</h1>
         </div>
-        <button className="btn primary" disabled={busy} onClick={newChat}>+ New chat</button>
-        <div style={{ flex: 1 }} />
+        <MonthNav />
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+          <button className="btn primary" disabled={busy} onClick={newChat}>+ New chat</button>
+        </div>
       </div>
 
       <div className="proj-columns" style={{ gridTemplateColumns: '1fr 1fr' }}>

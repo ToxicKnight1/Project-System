@@ -100,7 +100,7 @@ export default function App() {
             <div className="topbar-links">
               <NavLink to={home} end className="nav-link">⌂ Home</NavLink>
               {isOps && <NavLink to="/projects" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Projects</NavLink>}
-              {isOps && <NavLink to="/quotes" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>✦ Compare Quotes</NavLink>}
+              {isOps && <NavLink to="/quotes" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Compare Quotes</NavLink>}
             </div>
             <div className="topbar-user">
               <NotificationBell />
@@ -123,6 +123,27 @@ export default function App() {
         </div>
       )}
     </AuthCtx.Provider>
+  );
+}
+
+// Month pill with ← → navigation, shared across pages. Controlled on the
+// dashboard (where it filters); self-contained elsewhere.
+export function MonthNav({ value, onChange }) {
+  const now = new Date();
+  const [local, setLocal] = useState({ y: now.getFullYear(), m: now.getMonth() });
+  const cur = value || local;
+  const shift = (d) => {
+    const date = new Date(cur.y, cur.m + d, 1);
+    const next = { y: date.getFullYear(), m: date.getMonth() };
+    if (onChange) onChange(next); else setLocal(next);
+  };
+  const name = new Date(cur.y, cur.m, 1).toLocaleDateString('en-GB', { month: 'long' });
+  return (
+    <div className="month-nav">
+      <button className="btn small" onClick={() => shift(-1)} title="Previous month">←</button>
+      <span className="month-pill">{name}</span>
+      <button className="btn small" onClick={() => shift(1)} title="Next month">→</button>
+    </div>
   );
 }
 

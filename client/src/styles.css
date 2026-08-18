@@ -68,7 +68,7 @@ a { color: var(--accent); text-decoration: none; }
 /* No max-width cap: the layout hugs the screen edges at every window size. */
 .main { flex: 1; padding: 28px 26px 60px; min-width: 0; width: 100%; }
 .page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; gap: 12px; flex-wrap: wrap; }
-.page-head h1 { font-size: 1.35rem; font-weight: 800; color: var(--text-strong); }
+.page-head h1 { font-size: 1.35rem; font-weight: 800; color: var(--accent); }
 .page-sub { color: var(--text-muted); font-size: 0.84rem; margin-top: 3px; }
 
 /* ── Dashboard backdrop ── */
@@ -441,7 +441,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .month-nav { display: flex; align-items: center; gap: 10px; }
 .month-pill {
   background: var(--navy); color: #fff; border-radius: 10px;
-  padding: 8px 22px; font-size: 1.3rem; font-weight: 800; white-space: nowrap;
+  padding: 8px 22px; font-size: 1.17rem; font-weight: 800; white-space: nowrap;
 }
 .month-nav .btn.small { padding: 8px 12px; }
 .year-corner { font-size: 1.15rem; font-weight: 800; color: var(--navy); text-align: right; flex: 1; }

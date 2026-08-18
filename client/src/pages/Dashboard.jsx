@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, getToken } from '../api.js';
-import { fmtMoney, fmtDate } from '../App.jsx';
+import { fmtMoney, fmtDate, MonthNav } from '../App.jsx';
 
 // Read-only row: approving and status changes happen inside the form itself.
 function OpsRow({ p }) {
@@ -31,10 +31,6 @@ export default function Dashboard() {
   useEffect(() => { load(); }, []);
 
   const monthKey = `${month.y}-${String(month.m + 1).padStart(2, '0')}`;
-  const shiftMonth = (d) => {
-    const date = new Date(month.y, month.m + d, 1);
-    setMonth({ y: date.getFullYear(), m: date.getMonth() });
-  };
 
   const downloadReport = async () => {
     const res = await fetch(`/api/reports/monthly?month=${monthKey}`, { headers: { Authorization: `Bearer ${getToken()}` } });
@@ -52,7 +48,6 @@ export default function Dashboard() {
   if (!data) return <div className="muted">Loading…</div>;
 
   const inMonth = (p) => String(p.created_at || '').slice(0, 7) === monthKey;
-  const monthName = new Date(month.y, month.m, 1).toLocaleDateString('en-GB', { month: 'long' });
   const awaiting = data.awaiting.filter(inMonth);
   const approved = data.approved.filter(inMonth);
   const completed = (data.completed || []).filter(inMonth);
@@ -79,12 +74,8 @@ export default function Dashboard() {
         <div style={{ flex: 1 }}>
           <h1>Operations Dashboard</h1>
         </div>
-        <div className="month-nav">
-          <button className="btn small" onClick={() => shiftMonth(-1)} title="Previous month">←</button>
-          <span className="month-pill">{monthName}</span>
-          <button className="btn small" onClick={() => shiftMonth(1)} title="Next month">→</button>
-        </div>
-        <div className="year-corner">{month.y}</div>
+        <MonthNav value={month} onChange={setMonth} />
+        <div style={{ flex: 1 }} />
       </div>
 
       <div className="dash-columns">

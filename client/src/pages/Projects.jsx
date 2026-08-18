@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
-import { useAuth, ApprovalBadge, TierBadge, fmtMoney, fmtDate } from '../App.jsx';
+import { useAuth, ApprovalBadge, TierBadge, fmtMoney, fmtDate, MonthNav } from '../App.jsx';
 import IntakeWizard from './IntakeWizard.jsx';
 
 function ProjectRow({ p, onOpen, onResume }) {
@@ -66,8 +66,10 @@ export default function Projects() {
           <h1>Projects</h1>
           <div className="page-sub">{projects.length} total</div>
         </div>
-        {canCreate && <button className="btn primary" onClick={() => setWizard('new')}>+ New project</button>}
-        <div style={{ flex: 1 }} />
+        <MonthNav />
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+          {canCreate && <button className="btn primary" onClick={() => setWizard('new')}>+ New project</button>}
+        </div>
       </div>
 
       <div className="proj-columns">
