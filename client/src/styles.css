@@ -2,15 +2,17 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg: #0d1117;
-  --surface: #161b22;
-  --surface-2: #1c2330;
-  --border: #21262d;
-  --text: #e6edf3;
-  --text-strong: #f0f6fc;
-  --text-muted: #8b949e;
-  --text-faint: #6e7681;
-  --accent: #0ea5e9;
+  --bg: #d9e8f8;
+  --surface: #ffffff;
+  --surface-2: #e8f1fb;
+  --border: #b9cfe8;
+  --text: #1f2a44;
+  --text-strong: #101a33;
+  --text-muted: #51637f;
+  --text-faint: #7488a3;
+  --accent: #1d4ed8;
+  --navy: #221a66;
+  --navy-2: #2f2a8a;
   --good: #3fb950;
   --good-bg: #1a7f37;
   --warn: #e3b341;
@@ -41,6 +43,11 @@ a { color: var(--accent); text-decoration: none; }
 }
 .topbar .brand { font-size: 1.05rem; font-weight: 800; color: var(--text-strong); white-space: nowrap; }
 .topbar .brand span { color: var(--accent); }
+.topbar-logo {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  font-size: 1.25rem; color: var(--navy); letter-spacing: -0.02em; white-space: nowrap;
+}
+.topbar-logo b { font-weight: 800; }
 .topbar-links { display: flex; align-items: center; gap: 6px; }
 .nav-link {
   display: block; padding: 8px 14px; border-radius: 8px;
@@ -67,7 +74,7 @@ a { color: var(--accent); text-decoration: none; }
 .dash-bg {
   position: fixed; inset: 0; z-index: -1;
   background:
-    linear-gradient(rgba(13, 17, 23, 0.82), rgba(13, 17, 23, 0.92)),
+    linear-gradient(rgba(217, 232, 248, 0.86), rgba(217, 232, 248, 0.94)),
     url('/dashboard-bg.jpg') center / cover no-repeat;
 }
 
@@ -138,14 +145,14 @@ a { color: var(--accent); text-decoration: none; }
 
 /* ── Buttons ── */
 .btn {
-  background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+  background: var(--navy); color: #fff; border: 1px solid var(--navy);
   border-radius: 8px; padding: 8px 14px; font-size: 0.84rem; font-weight: 700;
   transition: background .15s;
 }
-.btn:hover { background: #232c3d; }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: #06131b; }
-.btn.primary:hover { background: #38bdf8; }
-.btn.danger { color: var(--bad); }
+.btn:hover { background: var(--navy-2); }
+.btn.primary { background: var(--navy); border-color: var(--navy); color: #fff; }
+.btn.primary:hover { background: var(--navy-2); }
+.btn.danger { color: #ffb4b4; }
 .btn.small { padding: 4px 10px; font-size: 0.76rem; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -170,11 +177,11 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 
 /* ── Badges (status: always paired with text label) ── */
 .badge { display: inline-block; font-size: 0.66rem; font-weight: 800; padding: 3px 10px; border-radius: 99px; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
-.badge.gray { background: #2d333b; color: var(--text-muted); }
-.badge.blue { background: #0c2d6b; color: #79c0ff; }
-.badge.green { background: var(--good-bg); color: #acf7b7; }
-.badge.yellow { background: var(--warn-bg); color: #fde68a; }
-.badge.red { background: var(--bad-bg); color: #fecaca; }
+.badge.gray { background: #dbe4ef; color: #51637f; }
+.badge.blue { background: #dbeafe; color: #1d4ed8; }
+.badge.green { background: #d5f5dd; color: #15803d; }
+.badge.yellow { background: #fdeec8; color: #92600e; }
+.badge.red { background: #fadddd; color: #b91c1c; }
 
 /* ── Forms ── */
 .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
@@ -359,7 +366,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
   max-width: 82%; padding: 12px 16px; border-radius: 14px;
   font-size: 0.87rem; line-height: 1.65; white-space: pre-wrap; overflow-wrap: break-word;
 }
-.chat-msg.user .chat-bubble { background: var(--accent); color: #06131b; border-bottom-right-radius: 4px; }
+.chat-msg.user .chat-bubble { background: var(--navy); color: #fff; border-bottom-right-radius: 4px; }
 .chat-msg.assistant .chat-bubble { background: var(--bg); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
 .chat-bubble.thinking { color: var(--text-faint); font-style: italic; }
 .chat-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border); margin-bottom: 12px; font-size: 0.8rem; }

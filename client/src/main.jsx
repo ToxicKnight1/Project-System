@@ -30,9 +30,9 @@ class ErrorBoundary extends React.Component {
   render() {
     if (!this.state.failed) return this.props.children;
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, color: '#e6edf3', textAlign: 'center', padding: 24 }}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, color: '#1f2a44', textAlign: 'center', padding: 24 }}>
         <div style={{ fontSize: '1.1rem', fontWeight: 800 }}>Something went wrong loading this page.</div>
-        <div style={{ color: '#8b949e', maxWidth: 420 }}>The error has been reported automatically. Reloading usually fixes it.</div>
+        <div style={{ color: '#51637f', maxWidth: 420 }}>The error has been reported automatically. Reloading usually fixes it.</div>
         {this.state.detail && (
           <code style={{ color: '#f85149', fontSize: '0.75rem', maxWidth: 560, overflowWrap: 'break-word' }}>{this.state.detail}</code>
         )}
