@@ -228,15 +228,21 @@ export default function ProjectDetail() {
           <div className="faint" style={{ fontSize: '0.76rem', marginBottom: 4 }}>
             <a onClick={() => navigate(home)} style={{ cursor: 'pointer' }}>← Back</a> / {project.reference} · {project.name}
           </div>
-          <h1>{project.name}</h1>
+          <h1 style={{ color: 'var(--navy)', fontSize: '1.9rem' }}>{project.name}</h1>
           <div className="page-sub">
             {[project.reference, project.department !== project.owner_department && project.department, author].filter(Boolean).join(' · ')}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <ApprovalBadge value={project.approval_status} />
-          <TierBadge value={project.priority_tier} />
-          {project.due_date && <span className="muted" style={{ fontSize: '0.82rem' }}>Due {fmtDate(project.due_date)}</span>}
+          {isOps && (
+            <div className="ops-controls">
+              <select value={project.priority_tier || ''} onChange={(e) => opsUpdate({ priority_tier: e.target.value })}>
+                <option value="">Priority tier…</option>
+                {TIERS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+              <input type="date" value={project.due_date || ''} onChange={(e) => opsUpdate({ due_date: e.target.value || null })} title="Due date" />
+            </div>
+          )}
           {isOps && project.approval_status === 'awaiting_approval' && (
             <button className="btn approve" onClick={approve}>✓ Approve</button>
           )}
@@ -250,7 +256,13 @@ export default function ProjectDetail() {
       </div>
 
       <div className="grid cols-4" style={{ marginBottom: 22 }}>
-        <div className="stat-tile"><div className="label">Status</div><div className="value" style={{ fontSize: '1.1rem' }}><ApprovalBadge value={project.approval_status} /></div></div>
+        <div className="stat-tile">
+          <div className="label">Status</div>
+          <div className="value" style={{ fontSize: '1.1rem', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <ApprovalBadge value={project.approval_status} />
+            <TierBadge value={project.priority_tier} />
+          </div>
+        </div>
         <div className="stat-tile">
           <div className="label">Budget total</div>
           <div className="value">{fmtMoney(project.budget_items.length ? project.budget_total : project.budget)}</div>
@@ -262,19 +274,6 @@ export default function ProjectDetail() {
         </div>
         <div className="stat-tile"><div className="label">Due date</div><div className="value" style={{ fontSize: '1.2rem' }}>{fmtDate(project.due_date)}</div></div>
       </div>
-
-      {isOps && (
-        <div className="card ops-panel" style={{ marginBottom: 22 }}>
-          <b style={{ fontSize: '0.85rem' }}>Operations controls</b>
-          <div className="ops-controls" style={{ marginTop: 10 }}>
-            <select value={project.priority_tier || ''} onChange={(e) => opsUpdate({ priority_tier: e.target.value })}>
-              <option value="">Priority tier…</option>
-              {TIERS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-            <input type="date" value={project.due_date || ''} onChange={(e) => opsUpdate({ due_date: e.target.value || null })} title="Due date" />
-          </div>
-        </div>
-      )}
 
       <div className="detail-grid">
         <div className="detail-card card">

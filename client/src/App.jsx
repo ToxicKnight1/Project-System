@@ -83,9 +83,11 @@ export default function App() {
 
   const isOps = user?.role === 'manager';
   const home = isOps ? '/dashboard' : '/projects';
-  // On a project page, Compare Quotes appears in the top navigation (ops only).
+  // Compare Quotes lives permanently in the top navigation (ops only): on a
+  // project page it opens that project's quotes; otherwise it goes to the
+  // Projects list to pick one.
   const projMatch = location.pathname.match(/^\/projects\/(\d+)/);
-  const quotesTarget = isOps && projMatch ? `/projects/${projMatch[1]}/quotes` : null;
+  const quotesTarget = isOps ? (projMatch ? `/projects/${projMatch[1]}/quotes` : '/projects') : null;
 
   return (
     <AuthCtx.Provider value={{ user, setUser, logout }}>
@@ -102,7 +104,11 @@ export default function App() {
             <div className="topbar-links">
               <NavLink to={home} end className="nav-link">⌂ Home</NavLink>
               {isOps && <NavLink to="/projects" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Projects</NavLink>}
-              {quotesTarget && <NavLink to={quotesTarget} className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>✦ Compare Quotes</NavLink>}
+              {quotesTarget && (
+                <NavLink to={quotesTarget} className={`nav-link${location.pathname.endsWith('/quotes') ? ' active' : ''}`}>
+                  ✦ Compare Quotes
+                </NavLink>
+              )}
               <NotificationBell />
             </div>
             <div className="topbar-user">
